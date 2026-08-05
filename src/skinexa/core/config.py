@@ -42,6 +42,8 @@ class TestingConfig(Config):
     SESSION_COOKIE_SECURE = False
     WTF_CSRF_ENABLED = False
     
+    SESSION_PROTECTION = None
+    
     SERVER_NAME = "localhost"
 
     STEAM_OPENID_URL = (
