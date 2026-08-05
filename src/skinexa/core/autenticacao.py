@@ -1,5 +1,5 @@
 from skinexa.core.extensions import login_manager
-from skinexa.services.usuarios import UsuarioService
+from skinexa.services.usuarios.service import UsuarioService
 
 @login_manager.user_loader
 def carregar_usuario(
