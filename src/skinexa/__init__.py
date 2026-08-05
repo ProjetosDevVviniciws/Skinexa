@@ -13,19 +13,20 @@ def create_app(
     """Cria e configura a aplicação Flask."""
     app = Flask(__name__)
     
-    app.config.from_object(config_class)
-    
-    _configurar_app(app)
+    _configurar_app(app, config_class)
     _inicializar_extensoes(app)
     _configurar_autenticacao()
     _registrar_blueprints(app)
 
     return app
 
-def _configurar_app(app: Flask) -> None:
-    """Carrega as configurações da aplicação."""
+def _configurar_app(
+    app: Flask,
+    config_class: type,
+) -> None:
+    """Carrega as configurações selecionadasda aplicação."""
 
-    app.config.from_object(DevelopmentConfig)
+    app.config.from_object(config_class)
     
 def _inicializar_extensoes(app: Flask) -> None:
     """Inicializa as extensões."""
