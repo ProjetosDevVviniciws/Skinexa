@@ -15,9 +15,7 @@ class Config:
     STEAM_API_KEY = os.getenv("STEAM_API_KEY")
     STEAM_OPENID_URL = os.getenv("STEAM_OPENID_URL")
     STEAM_OPENID_REALM = os.getenv("STEAM_OPENID_REALM")
-    STEAM_OPENID_RETURN_URL = os.getenv(
-        "STEAM_OPENID_RETURN_URL"
-    )
+    STEAM_OPENID_RETURN_URL = os.getenv("STEAM_OPENID_RETURN_URL")
 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -43,3 +41,15 @@ class TestingConfig(Config):
     TESTING = True
     SESSION_COOKIE_SECURE = False
     WTF_CSRF_ENABLED = False
+    
+    SERVER_NAME = "localhost"
+
+    STEAM_OPENID_URL = (
+        "https://steamcommunity.com/openid/login"
+    )
+
+    STEAM_OPENID_REALM = "http://localhost/"
+
+    STEAM_OPENID_RETURN_URL = (
+        "http://localhost/auth/steam/retorno"
+    )
