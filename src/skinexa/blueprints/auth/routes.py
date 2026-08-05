@@ -32,6 +32,7 @@ from skinexa.services.usuarios.service import UsuarioService
 auth_bp = Blueprint(
     "auth",
     __name__,
+    url_prefix="/auth",
 )
 
 def _url_redirecionamento_segura(url_destino: str) -> bool:
@@ -52,7 +53,7 @@ def login():
     """Redireciona o usuário para autenticação na Steam."""
 
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard.index"))
+        return redirect(url_for("home.index"))
 
     proxima_url = request.args.get("next")
 
@@ -83,14 +84,23 @@ def retorno_steam():
 
         perfil = buscar_perfil_steam(steam_id)
 
-        usuario = (
-            UsuarioService.autenticar_usuario_steam(
-                steam_id=perfil.steam_id,
-                nome_exibicao=perfil.nome_exibicao,
-                url_avatar=perfil.url_avatar,
-                url_perfil=perfil.url_perfil,
+        if perfil is None:
+            nome_exibicao = f"Usuario Steam {steam_id[-6:]}"
+            url_avatar = None
+            url_perfil = (
+                f"https://steamcommunity.com/profiles/{steam_id}"
             )
-        )
+        else:
+            nome_exibicao = perfil.nome_exibicao
+            url_avatar = perfil.url_avatar
+            url_perfil = perfil.url_perfil
+        
+        usuario = UsuarioService.autenticar_usuario_steam(
+                steam_id=steam_id,
+                nome_exibicao=nome_exibicao,
+                url_avatar=url_avatar,
+                url_perfil=url_perfil,
+            )
 
         autenticado = login_user(
             usuario,
