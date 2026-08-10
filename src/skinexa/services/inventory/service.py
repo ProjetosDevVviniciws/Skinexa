@@ -19,6 +19,13 @@ from skinexa.integrations.steam.normalizador_inventario import (
     normalizar_inventario_steam,
 )
 
+from skinexa.database.queries.leitura_inventario import (
+    contar_itens_inventario,
+    listar_itens_inventario,
+)
+
+from skinexa.dto.steam.inventario import ItemInventarioDTO
+
 @dataclass(frozen=True, slots=True)
 class ResultadoSincronizacaoInventario:
     usuario_id: int
@@ -94,3 +101,41 @@ class InventarioService:
             itens_processados=len(itens),
             itens_ativos=total_ativos,
         )
+        
+    @staticmethod
+    def listar_inventario(
+        *,
+        usuario_id: int,
+        pagina: int = 1,
+        itens_por_pagina: int = 20,
+    ) -> tuple[list[ItemInventarioDTO], int]:
+        """Retorna os itens do inventário e sua quantidade total."""
+
+        if pagina < 1:
+            pagina = 1
+
+        if itens_por_pagina < 1:
+            itens_por_pagina = 20
+
+        deslocamento = (
+            pagina - 1
+        ) * itens_por_pagina
+
+        registros = listar_itens_inventario(
+            usuario_id,
+            limite=itens_por_pagina,
+            deslocamento=deslocamento,
+        )
+
+        itens = [
+            ItemInventarioDTO.criar_de_registro(
+                registro
+            )
+            for registro in registros
+        ]
+
+        total = contar_itens_inventario(
+            usuario_id
+        )
+
+        return itens, total
