@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from typing import Any
 
+from datetime import datetime
+from decimal import Decimal
+
 @dataclass(frozen=True, slots=True)
 class ItemCatalogoSteamDTO:
     """Representa um tipo genérico de item recebido da Steam."""
@@ -81,3 +84,74 @@ class ItemInventarioSteamDTO:
 
     catalogo: ItemCatalogoSteamDTO
     instancia: InstanciaItemSteamDTO
+    
+@dataclass(frozen=True, slots=True)
+class ItemInventarioDTO:
+    instancia_id: int
+    item_catalogo_id: int
+
+    asset_id: str
+
+    nome_mercado: str
+    nome_exibicao: str
+
+    tipo_item: str
+    nome_arma: str | None
+    nome_acabamento: str | None
+    estado_exterior: str | None
+
+    raridade: str | None
+    qualidade: str | None
+    colecao: str | None
+
+    url_icone: str | None
+    url_icone_grande: str | None
+
+    valor_float: Decimal | None
+
+    stattrak: bool
+    souvenir: bool
+    trocavel: bool
+    comercializavel: bool
+
+    quantidade: int
+    bloqueado_ate: datetime | None
+    ultima_visualizacao_em: datetime
+
+    @classmethod
+    def criar_de_registro(
+        cls,
+        registro: dict[str, Any],
+    ) -> "ItemInventarioDTO":
+        return cls(
+            instancia_id=int(registro["instancia_id"]),
+            item_catalogo_id=int(
+                registro["item_catalogo_id"]
+            ),
+            asset_id=registro["asset_id"],
+            nome_mercado=registro["nome_mercado"],
+            nome_exibicao=registro["nome_exibicao"],
+            tipo_item=registro["tipo_item"],
+            nome_arma=registro["nome_arma"],
+            nome_acabamento=registro["nome_acabamento"],
+            estado_exterior=registro["estado_exterior"],
+            raridade=registro["raridade"],
+            qualidade=registro["qualidade"],
+            colecao=registro["colecao"],
+            url_icone=registro["url_icone"],
+            url_icone_grande=registro[
+                "url_icone_grande"
+            ],
+            valor_float=registro["valor_float"],
+            stattrak=bool(registro["stattrak"]),
+            souvenir=bool(registro["souvenir"]),
+            trocavel=bool(registro["trocavel"]),
+            comercializavel=bool(
+                registro["comercializavel"]
+            ),
+            quantidade=int(registro["quantidade"]),
+            bloqueado_ate=registro["bloqueado_ate"],
+            ultima_visualizacao_em=registro[
+                "ultima_visualizacao_em"
+            ],
+        )
