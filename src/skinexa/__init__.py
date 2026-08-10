@@ -1,11 +1,17 @@
 # Cria e configura a aplicação Flask e registra seus Blueprints
 
+import mimetypes
 from flask import Flask
 from skinexa.core.config import DevelopmentConfig
 from skinexa.core.extensions import login_manager, csrf
 from skinexa.blueprints.home.routes import home_bp
 from skinexa.blueprints.auth.routes import auth_bp
 from skinexa.blueprints.dashboard.routes import dashboard_bp
+
+mimetypes.add_type(
+    "text/javascript",
+    ".js",
+)
 
 def create_app(
     config_class: type = DevelopmentConfig,
