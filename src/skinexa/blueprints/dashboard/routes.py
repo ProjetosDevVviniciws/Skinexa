@@ -1,4 +1,4 @@
-from flask import render_template, Blueprint, request, jsonify
+from flask import current_app, render_template, Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 from skinexa.integrations.steam.inventario import (
@@ -162,14 +162,3 @@ def sincronizar_inventario():
                 ),
             }
         ), 502
-
-    except Exception:
-        return jsonify(
-            {
-                "sucesso": False,
-                "mensagem": (
-                    "Ocorreu um erro interno ao sincronizar "
-                    "o inventário."
-                ),
-            }
-        ), 500
