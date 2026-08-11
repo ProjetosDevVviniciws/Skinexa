@@ -7,6 +7,7 @@ from skinexa.core.extensions import login_manager, csrf
 from skinexa.blueprints.home.routes import home_bp
 from skinexa.blueprints.auth.routes import auth_bp
 from skinexa.blueprints.dashboard.routes import dashboard_bp
+from skinexa.core.errors import registrar_tratadores_erros
 
 mimetypes.add_type(
     "text/javascript",
@@ -23,7 +24,9 @@ def create_app(
     _inicializar_extensoes(app)
     _configurar_autenticacao()
     _registrar_blueprints(app)
-
+    
+    registrar_tratadores_erros(app)
+    
     return app
 
 def _configurar_app(
