@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from sqlalchemy import Connection
+
 from skinexa.database.connection import engine
 from skinexa.database.queries.inventario import (
     contar_instancias_ativas_usuario,
@@ -26,6 +28,19 @@ from skinexa.database.queries.leitura_inventario import (
 
 from skinexa.dto.steam.inventario import ItemInventarioDTO
 
+from datetime import UTC, datetime
+
+from flask import current_app
+
+from skinexa.database.queries.usuarios import (
+    atualizar_ultima_sincronizacao_inventario,
+    buscar_ultima_sincronizacao_inventario,
+)
+
+from skinexa.exceptions.inventario import (
+    CooldownSincronizacaoAtivo,
+)
+
 @dataclass(frozen=True, slots=True)
 class ResultadoSincronizacaoInventario:
     usuario_id: int
@@ -36,6 +51,51 @@ class ResultadoSincronizacaoInventario:
 class InventarioService:
     """Coordena consulta, normalização e persistência do inventário."""
 
+    @staticmethod
+    def validar_cooldown_sincronizacao(
+        *,
+        conexao: Connection,
+        usuario_id: int,
+    ) -> None:
+        """Verifica se o usuário já pode sincronizar novamente."""
+
+        ultima_sincronizacao = (
+            buscar_ultima_sincronizacao_inventario(
+                conexao,
+                usuario_id
+            )
+        )
+
+        if ultima_sincronizacao is None:
+            return
+
+        cooldown_segundos = int(
+            current_app.config[
+                "INVENTARIO_COOLDOWN_SEGUNDOS"
+            ]
+        )
+
+        agora_utc = datetime.now(
+            UTC
+        ).replace(tzinfo=None)
+
+        segundos_decorridos = int(
+            (
+                agora_utc
+                - ultima_sincronizacao
+            ).total_seconds()
+        )
+
+        segundos_restantes = (
+            cooldown_segundos
+            - segundos_decorridos
+        )
+
+        if segundos_restantes > 0:
+            raise CooldownSincronizacaoAtivo(
+                segundos_restantes
+            )
+    
     @staticmethod
     def sincronizar_inventario(
         *,
@@ -48,6 +108,13 @@ class InventarioService:
         Toda a persistência ocorre em uma única transação.
         """
 
+        with engine.connect() as conexao:
+        
+            InventarioService.validar_cooldown_sincronizacao(
+                conexao=conexao,
+                usuario_id=usuario_id
+            )
+        
         inventario_bruto = buscar_inventario_publico(
             steam_id
         )
@@ -93,6 +160,19 @@ class InventarioService:
                 )
             )
 
+            sincronizacao_registrada = (
+                atualizar_ultima_sincronizacao_inventario(
+                    conexao,
+                    usuario_id,
+                )
+            )
+
+            if not sincronizacao_registrada:
+                raise RuntimeError(
+                    "Não foi possível registrar a última "
+                    "sincronização do inventário."
+                )
+    
         return ResultadoSincronizacaoInventario(
             usuario_id=usuario_id,
             total_informado_steam=(
