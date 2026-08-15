@@ -79,6 +79,8 @@ async function sincronizarInventario(formulario) {
 
     const textoOriginal = botao.textContent;
 
+    let cooldownAtivado = false;
+
     botao.disabled = true;
     botao.textContent = "Sincronizando...";
 
@@ -101,6 +103,26 @@ async function sincronizarInventario(formulario) {
         const dados = await resposta.json();
 
         if (!resposta.ok) {
+            if (
+                resposta.status === 429
+                && dados.segundos_restantes
+            ) {
+                cooldownAtivado = true;
+                
+                iniciarCooldownVisual(
+                    dados.segundos_restantes
+                );
+
+                exibirToast(
+                    formatarMensagemCooldown(
+                        dados.segundos_restantes
+                    ),
+                    "warning"
+                );
+
+                return;
+            }
+
             throw new Error(
                 dados.mensagem
                 || "Não foi possível sincronizar."
@@ -123,8 +145,10 @@ async function sincronizarInventario(formulario) {
         );
 
     } finally {
-        botao.disabled = false;
-        botao.textContent = textoOriginal;
+        if (!cooldownAtivado) {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+        }
     }
 }
 
@@ -157,6 +181,23 @@ async function carregarInventario() {
         );
 
         if (!resposta.ok) {
+            if (
+                dados.codigo === "cooldown_sincronizacao"
+                && dados.segundos_restantes
+            ) {
+                cooldownAtivado = true;
+                iniciarCooldownVisual(
+                    dados.segundos_restantes
+                );
+                exibirToast(
+                    formatarMensagemCooldown(
+                        dados.segundos_restantes
+                    ),
+                    "warning"
+                );
+                return;
+            }
+
             throw new Error(
                 "Não foi possível carregar o inventário."
             );
@@ -194,6 +235,103 @@ function exibirCarregamentoInventario(
             Carregando inventário...
         </p>
     `;
+}
+
+function iniciarCooldownVisual(segundos) {
+    const botao = document.querySelector(
+        "#inventory-sync-button"
+    );
+
+    if (!botao) {
+        return;
+    }
+
+    let segundosRestantes = Math.max(
+        0,
+        Number(segundos)
+    );
+
+    botao.disabled = true;
+
+    atualizarTextoCooldown(
+        botao,
+        segundosRestantes
+    );
+
+    const intervalo = window.setInterval(
+        () => {
+            segundosRestantes -= 1;
+
+            if (segundosRestantes <= 0) {
+                window.clearInterval(
+                    intervalo
+                );
+
+                botao.disabled = false;
+                botao.textContent =
+                    "Sincronizar inventário";
+
+                return;
+            }
+
+            atualizarTextoCooldown(
+                botao,
+                segundosRestantes
+            );
+        },
+        1000
+    );
+}
+
+function atualizarTextoCooldown(
+    botao,
+    segundos
+) {
+    botao.textContent =
+        `Sincronizar novamente em ${
+            formatarTempo(segundos)
+        }`;
+}
+
+function formatarTempo(segundos) {
+    const minutos = Math.floor(
+        segundos / 60
+    );
+
+    const restanteSegundos =
+        segundos % 60;
+
+    return (
+        `${minutos}:`
+        + `${String(
+            restanteSegundos
+        ).padStart(2, "0")}`
+    );
+}
+
+function formatarMensagemCooldown(
+    segundos
+) {
+    const minutos = Math.floor(
+        segundos / 60
+    );
+
+    const restanteSegundos =
+        segundos % 60;
+
+    if (minutos > 0) {
+        return (
+            "Aguarde "
+            + `${minutos} min `
+            + `${restanteSegundos} s `
+            + "antes de sincronizar novamente."
+        );
+    }
+
+    return (
+        `Aguarde ${restanteSegundos} s `
+        + "antes de sincronizar novamente."
+    );
 }
 
 function renderizarInventario(
