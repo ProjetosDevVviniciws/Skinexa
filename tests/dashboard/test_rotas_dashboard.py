@@ -21,6 +21,10 @@ from decimal import Decimal
 
 from skinexa.dto.steam.inventario import ItemInventarioDTO
 
+from skinexa.exceptions.inventario import (
+    CooldownSincronizacaoAtivo,
+)
+
 def test_dashboard_bloqueia_usuario_anonimo(client):
     """Testa se a rota /dashboard bloqueia usuários anônimos."""
     resposta = client.get(
@@ -413,3 +417,49 @@ def test_sincronizar_inventario_com_limite_steam(
     dados = resposta.get_json()
 
     assert dados["sucesso"] is False
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.sincronizar_inventario",
+)
+
+def test_sincronizar_inventario_com_cooldown(
+    mock_sincronizar,
+    mock_carregar_usuario,
+    client,
+):
+    """Retorna 429 quando o cooldown ainda está ativo."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_sincronizar.side_effect = (
+        CooldownSincronizacaoAtivo(
+            segundos_restantes=75
+        )
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.post(
+        "/dashboard/sincronizar-inventario"
+    )
+
+    assert resposta.status_code == 429
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["sucesso"] is False
+
+    assert (
+        dados["mensagem"]
+        == "Aguarde antes de sincronizar novamente."
+    )
+
+    assert dados["segundos_restantes"] == 75
