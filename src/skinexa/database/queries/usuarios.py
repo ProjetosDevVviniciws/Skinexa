@@ -2,10 +2,6 @@ from typing import Any
 
 from sqlalchemy import text
 
-from typing import Any
-
-from sqlalchemy import text
-
 from skinexa.database.connection import engine
 
 from sqlalchemy.engine import Connection
@@ -216,10 +212,11 @@ def buscar_ultima_sincronizacao_inventario(
 
     consulta = text(
         """
-        UPDATE usuarios
-        SET
-            ultima_sincronizacao_inventario_em = UTC_TIMESTAMP()
+        SELECT
+            ultima_sincronizacao_inventario_em
+        FROM usuarios
         WHERE id = :usuario_id
+        LIMIT 1
         """
     )
 
