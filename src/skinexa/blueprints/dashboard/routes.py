@@ -11,6 +11,10 @@ from skinexa.integrations.steam.inventario import (
 
 from skinexa.services.inventory.service import InventarioService
 
+from skinexa.exceptions.inventario import (
+    CooldownSincronizacaoAtivo,
+)
+
 dashboard_bp = Blueprint(
     "dashboard",
     __name__,
@@ -109,6 +113,20 @@ def sincronizar_inventario():
             }
         ), 200
 
+    except CooldownSincronizacaoAtivo as erro:
+        return jsonify(
+            {
+                "sucesso": False,
+                "codigo": "cooldown_sincronizacao",
+                "mensagem": (
+                    "Aguarde antes de sincronizar novamente."
+                ),
+                "segundos_restantes": (
+                    erro.segundos_restantes
+                ),
+            }
+        ), 429
+    
     except InventarioSteamPrivado:
         return jsonify(
             {
@@ -124,6 +142,7 @@ def sincronizar_inventario():
         return jsonify(
             {
                 "sucesso": False,
+                "codigo": "limite_steam",
                 "mensagem": (
                     "A Steam limitou temporariamente as consultas. "
                     "Tente novamente mais tarde."
