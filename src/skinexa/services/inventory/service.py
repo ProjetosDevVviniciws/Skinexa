@@ -188,6 +188,7 @@ class InventarioService:
         usuario_id: int,
         pagina: int = 1,
         itens_por_pagina: int = 20,
+        busca: str | None = None,
     ) -> tuple[list[ItemInventarioDTO], int]:
         """Retorna os itens do inventário e sua quantidade total."""
 
@@ -197,6 +198,15 @@ class InventarioService:
         if itens_por_pagina < 1:
             itens_por_pagina = 20
 
+        busca_normalizada = (
+            busca.strip()
+            if busca is not None
+            else None
+        )
+        
+        if not busca_normalizada:
+            busca_normalizada = None
+        
         deslocamento = (
             pagina - 1
         ) * itens_por_pagina
@@ -205,6 +215,7 @@ class InventarioService:
             usuario_id,
             limite=itens_por_pagina,
             deslocamento=deslocamento,
+            busca=busca_normalizada,
         )
 
         itens = [
@@ -215,7 +226,8 @@ class InventarioService:
         ]
 
         total = contar_itens_inventario(
-            usuario_id
+            usuario_id,
+            busca=busca_normalizada
         )
 
         return itens, total
