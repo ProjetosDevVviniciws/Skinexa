@@ -24,6 +24,7 @@ from skinexa.integrations.steam.normalizador_inventario import (
 from skinexa.database.queries.leitura_inventario import (
     contar_itens_inventario,
     listar_itens_inventario,
+    listar_tipos_itens_inventario
 )
 
 from skinexa.dto.steam.inventario import ItemInventarioDTO
@@ -243,3 +244,14 @@ class InventarioService:
         )
 
         return itens, total
+    
+    @staticmethod
+    def listar_tipos_inventario(
+        *,
+        usuario_id: int,
+    ) -> list[str]:
+        """Retorna os tipos distintos de itens ativos do inventário."""
+
+        return listar_tipos_itens_inventario(
+            usuario_id
+        )
