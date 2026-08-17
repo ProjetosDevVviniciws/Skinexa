@@ -41,6 +41,12 @@ def obter_inventario():
         type=int,
     )
 
+    busca = request.args.get(
+        "busca",
+        default=None,
+        type=str,
+    )
+        
     itens_por_pagina = 20
 
     itens, total_itens = (
@@ -48,6 +54,7 @@ def obter_inventario():
             usuario_id=current_user.id,
             pagina=pagina,
             itens_por_pagina=itens_por_pagina,
+            busca=busca,
         )
     )
 
@@ -81,6 +88,7 @@ def obter_inventario():
             "total_itens": total_itens,
             "pagina": pagina,
             "itens_por_pagina": itens_por_pagina,
+            "busca": busca or "",
             "tem_anterior": pagina > 1,
             "tem_proxima": (
                 pagina * itens_por_pagina
