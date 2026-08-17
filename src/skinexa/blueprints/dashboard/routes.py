@@ -196,3 +196,18 @@ def sincronizar_inventario():
                 ),
             }
         ), 502
+        
+@dashboard_bp.get("/inventario/tipos")
+@login_required
+def obter_tipos_inventario():
+    """Retorna os tipos distintos de itens ativos do inventário."""
+
+    tipos = InventarioService.listar_tipos_inventario(
+        usuario_id=current_user.id,
+    )
+
+    return jsonify(
+        {
+            "tipos": tipos,
+        }
+    )
