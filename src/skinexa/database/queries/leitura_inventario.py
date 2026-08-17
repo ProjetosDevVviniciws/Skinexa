@@ -180,3 +180,38 @@ def contar_itens_inventario(
         ).scalar_one()
 
     return int(total)
+
+def listar_tipos_itens_inventario(
+    usuario_id: int,
+) -> list[str]:
+    """Retorna os tipos distintos de itens ativos do inventário."""
+
+    consulta = text(
+        """
+        SELECT DISTINCT
+            ic.tipo_item
+
+        FROM instancias_itens AS ii
+
+        INNER JOIN itens_catalogo AS ic
+            ON ic.id = ii.item_catalogo_id
+
+        WHERE ii.usuario_id = :usuario_id
+          AND ii.ativo = 1
+          AND ic.tipo_item IS NOT NULL
+          AND TRIM(ic.tipo_item) <> ''
+
+        ORDER BY ic.tipo_item ASC
+        """
+    )
+
+    with engine.connect() as conexao:
+        resultado = conexao.execute(
+            consulta,
+            {"usuario_id": usuario_id},
+        ).scalars().all()
+
+    return [
+        str(tipo)
+        for tipo in resultado
+    ]
