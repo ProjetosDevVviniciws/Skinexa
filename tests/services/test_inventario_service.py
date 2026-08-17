@@ -17,6 +17,9 @@ from skinexa.exceptions.inventario import (
     CooldownSincronizacaoAtivo,
 )
 
+from skinexa.dto.steam.inventario import ItemInventarioDTO
+from skinexa.services.inventory.service import InventarioService
+
 STEAM_ID_TESTE = "76561198000000001"
 
 def criar_item_normalizado() -> ItemInventarioSteamDTO:
@@ -553,4 +556,167 @@ def test_cooldown_falha_ao_atualizar_sincronizacao(
     mock_atualizar.assert_called_once_with(
         conexao_transacao,
         1,
+    )
+    
+def criar_registro_inventario_leitura() -> dict:
+    """Cria um registro de inventário para leitura, usado em testes."""
+    agora = datetime.now(
+        UTC
+    ).replace(tzinfo=None)
+
+    return {
+        "instancia_id": 1,
+        "item_catalogo_id": 10,
+        "asset_id": "1001",
+        "nome_mercado": (
+            "AWP | Printstream (Field-Tested)"
+        ),
+        "nome_exibicao": "AWP | Cadeia de Caracteres",
+        "tipo_item": "Rifle de Precisão",
+        "nome_arma": "AWP",
+        "nome_acabamento": "Printstream",
+        "estado_exterior": "Testada em Campo",
+        "raridade": "Oculto",
+        "qualidade": None,
+        "colecao": None,
+        "url_icone": "https://example.com/awp.png",
+        "url_icone_grande": None,
+        "valor_float": None,
+        "stattrak": False,
+        "souvenir": False,
+        "trocavel": True,
+        "comercializavel": True,
+        "quantidade": 1,
+        "bloqueado_ate": None,
+        "ultima_visualizacao_em": agora,
+    }
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=1,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+)
+
+def test_listar_inventario_com_busca(
+    mock_listar,
+    mock_contar,
+):
+    """Testa a função de listar inventário com busca, verificando se os itens retornados correspondem à busca fornecida."""
+
+    mock_listar.return_value = [
+        criar_registro_inventario_leitura()
+    ]
+
+    itens, total = (
+        InventarioService.listar_inventario(
+            usuario_id=1,
+            pagina=1,
+            itens_por_pagina=20,
+            busca="AWP",
+        )
+    )
+
+    assert total == 1
+    assert len(itens) == 1
+
+    assert isinstance(
+        itens[0],
+        ItemInventarioDTO,
+    )
+
+    assert itens[0].nome_mercado == (
+        "AWP | Printstream (Field-Tested)"
+    )
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca="AWP",
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca="AWP",
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=1,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+)
+
+def test_listar_inventario_normaliza_busca(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a função de listar inventário normaliza a busca, removendo espaços em branco desnecessários."""
+
+    mock_listar.return_value = [
+        criar_registro_inventario_leitura()
+    ]
+
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="   AWP   ",
+    )
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca="AWP",
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca="AWP",
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+    return_value=[],
+)
+def test_listar_inventario_trata_busca_vazia(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a função de listar inventário trata corretamente uma busca que é apenas espaços em branco, retornando todos os itens do inventário."""
+
+    itens, total = (
+        InventarioService.listar_inventario(
+            usuario_id=1,
+            busca="     ",
+        )
+    )
+
+    assert itens == []
+    assert total == 0
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca=None,
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca=None,
     )
