@@ -46,7 +46,13 @@ def obter_inventario():
         default=None,
         type=str,
     )
-        
+    
+    tipo_item = request.args.get(
+        "tipo",
+        default=None,
+        type=str,
+    )
+    
     itens_por_pagina = 20
 
     itens, total_itens = (
@@ -55,6 +61,7 @@ def obter_inventario():
             pagina=pagina,
             itens_por_pagina=itens_por_pagina,
             busca=busca,
+            tipo_item=tipo_item
         )
     )
 
