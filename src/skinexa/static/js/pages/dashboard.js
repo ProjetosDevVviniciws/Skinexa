@@ -4,6 +4,7 @@ import {
 
 const inventoryState = {
     pagina: 1,
+    busca: "",
 };
 
 document.addEventListener(
@@ -12,29 +13,9 @@ document.addEventListener(
         configurarEventosInventario();
         configurarSincronizacaoInventario();
         carregarInventario();
+        configurarPesquisaInventario();
     }
 );
-
-function configurarSincronizacaoInventario() {
-    const formulario = document.querySelector(
-        "#inventory-sync-form"
-    );
-
-    if (!formulario) {
-        return;
-    }
-
-    formulario.addEventListener(
-        "submit",
-        async (evento) => {
-            evento.preventDefault();
-
-            await sincronizarInventario(
-                formulario
-            );
-        }
-    );
-}
 
 function configurarEventosInventario() {
     const botaoAnterior = document.querySelector(
@@ -66,6 +47,138 @@ function configurarEventosInventario() {
             carregarInventario();
         }
     );
+}
+
+function configurarPesquisaInventario() {
+    const campoBusca = document.querySelector(
+        "#inventory-search-input"
+    );
+
+    if (!campoBusca) {
+        return;
+    }
+
+    const pesquisarComDebounce = debounce(
+        async () => {
+            inventoryState.busca =
+                campoBusca.value.trim();
+
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        },
+        350
+    );
+
+    campoBusca.addEventListener(
+        "input",
+        pesquisarComDebounce
+    );
+}
+
+function configurarSincronizacaoInventario() {
+    const formulario = document.querySelector(
+        "#inventory-sync-form"
+    );
+
+    if (!formulario) {
+        return;
+    }
+
+    formulario.addEventListener(
+        "submit",
+        async (evento) => {
+            evento.preventDefault();
+
+            await sincronizarInventario(
+                formulario
+            );
+        }
+    );
+}
+
+async function carregarInventario() {
+    const container = document.querySelector(
+        "#inventory-list"
+    );
+
+    const total = document.querySelector(
+        "#inventory-total"
+    );
+
+    if (!container || !total) {
+        return;
+    }
+
+    exibirCarregamentoInventario(
+        container,
+        total
+    );
+
+    try {
+        const parametros = new URLSearchParams({
+            pagina: String(
+                inventoryState.pagina
+            ),
+        });
+
+        if (inventoryState.busca) {
+            parametros.set(
+                "busca",
+                inventoryState.busca
+            );
+        }
+
+        const resposta = await fetch(
+            `/dashboard/inventario?${parametros.toString()}`,
+            {
+                headers: {
+                    Accept: "application/json",
+                },
+            }
+        );
+
+        if (!resposta.ok) {
+            if (
+                dados.codigo === "cooldown_sincronizacao"
+                && dados.segundos_restantes
+            ) {
+                cooldownAtivado = true;
+                iniciarCooldownVisual(
+                    dados.segundos_restantes
+                );
+                exibirToast(
+                    formatarMensagemCooldown(
+                        dados.segundos_restantes
+                    ),
+                    "warning"
+                );
+                return;
+            }
+
+            throw new Error(
+                "Não foi possível carregar o inventário."
+            );
+        }
+
+        const dados = await resposta.json();
+
+        renderizarInventario(
+            container,
+            dados
+        );
+
+        atualizarPaginacao(dados);
+
+        total.textContent =
+            `${dados.total_itens} item(ns) ativo(s)`;
+
+    } catch (erro) {
+        exibirErroInventario(
+            container,
+            total
+        );
+    }
 }
 
 async function sincronizarInventario(formulario) {
@@ -152,188 +265,6 @@ async function sincronizarInventario(formulario) {
     }
 }
 
-async function carregarInventario() {
-    const container = document.querySelector(
-        "#inventory-list"
-    );
-
-    const total = document.querySelector(
-        "#inventory-total"
-    );
-
-    if (!container || !total) {
-        return;
-    }
-
-    exibirCarregamentoInventario(
-        container,
-        total
-    );
-
-    try {
-        const resposta = await fetch(
-            `/dashboard/inventario?pagina=${inventoryState.pagina}`,
-            {
-                headers: {
-                    Accept: "application/json",
-                },
-            }
-        );
-
-        if (!resposta.ok) {
-            if (
-                dados.codigo === "cooldown_sincronizacao"
-                && dados.segundos_restantes
-            ) {
-                cooldownAtivado = true;
-                iniciarCooldownVisual(
-                    dados.segundos_restantes
-                );
-                exibirToast(
-                    formatarMensagemCooldown(
-                        dados.segundos_restantes
-                    ),
-                    "warning"
-                );
-                return;
-            }
-
-            throw new Error(
-                "Não foi possível carregar o inventário."
-            );
-        }
-
-        const dados = await resposta.json();
-
-        renderizarInventario(
-            container,
-            dados
-        );
-
-        atualizarPaginacao(dados);
-
-        total.textContent =
-            `${dados.total_itens} item(ns) ativo(s)`;
-
-    } catch (erro) {
-        exibirErroInventario(
-            container,
-            total
-        );
-    }
-}
-
-function exibirCarregamentoInventario(
-    container,
-    total
-) {
-    total.textContent =
-        "Carregando inventário...";
-
-    container.innerHTML = `
-        <p class="inventory-loading">
-            Carregando inventário...
-        </p>
-    `;
-}
-
-function iniciarCooldownVisual(segundos) {
-    const botao = document.querySelector(
-        "#inventory-sync-button"
-    );
-
-    if (!botao) {
-        return;
-    }
-
-    let segundosRestantes = Math.max(
-        0,
-        Number(segundos)
-    );
-
-    botao.disabled = true;
-
-    atualizarTextoCooldown(
-        botao,
-        segundosRestantes
-    );
-
-    const intervalo = window.setInterval(
-        () => {
-            segundosRestantes -= 1;
-
-            if (segundosRestantes <= 0) {
-                window.clearInterval(
-                    intervalo
-                );
-
-                botao.disabled = false;
-                botao.textContent =
-                    "Sincronizar inventário";
-
-                return;
-            }
-
-            atualizarTextoCooldown(
-                botao,
-                segundosRestantes
-            );
-        },
-        1000
-    );
-}
-
-function atualizarTextoCooldown(
-    botao,
-    segundos
-) {
-    botao.textContent =
-        `Sincronizar novamente em ${
-            formatarTempo(segundos)
-        }`;
-}
-
-function formatarTempo(segundos) {
-    const minutos = Math.floor(
-        segundos / 60
-    );
-
-    const restanteSegundos =
-        segundos % 60;
-
-    return (
-        `${minutos}:`
-        + `${String(
-            restanteSegundos
-        ).padStart(2, "0")}`
-    );
-}
-
-function formatarMensagemCooldown(
-    segundos
-) {
-    const minutos = Math.floor(
-        segundos / 60
-    );
-
-    const restanteSegundos =
-        segundos % 60;
-
-    if (minutos > 0) {
-        return (
-            "Aguarde "
-            + `${minutos} min `
-            + `${restanteSegundos} s `
-            + "antes de sincronizar novamente."
-        );
-    }
-
-    return (
-        `Aguarde ${restanteSegundos} s `
-        + "antes de sincronizar novamente."
-    );
-}
-
 function renderizarInventario(
     container,
     dados
@@ -345,8 +276,13 @@ function renderizarInventario(
             "p"
         );
 
+        if (inventoryState.busca) {
         mensagem.textContent =
-            "Nenhum item sincronizado.";
+            `Nenhum item encontrado para "${inventoryState.busca}".`;
+        } else {
+            mensagem.textContent =
+                "Nenhum item sincronizado.";
+        }
 
         container.appendChild(mensagem);
 
@@ -512,6 +448,20 @@ function atualizarPaginacao(dados) {
         dados.total_itens === 0;
 }
 
+function exibirCarregamentoInventario(
+    container,
+    total
+) {
+    total.textContent =
+        "Carregando inventário...";
+
+    container.innerHTML = `
+        <p class="inventory-loading">
+            Carregando inventário...
+        </p>
+    `;
+}
+
 function exibirErroInventario(
     container,
     total
@@ -534,4 +484,118 @@ function exibirErroInventario(
         "Não foi possível carregar o inventário.",
         "error"
     );
+}
+
+function iniciarCooldownVisual(segundos) {
+    const botao = document.querySelector(
+        "#inventory-sync-button"
+    );
+
+    if (!botao) {
+        return;
+    }
+
+    let segundosRestantes = Math.max(
+        0,
+        Number(segundos)
+    );
+
+    botao.disabled = true;
+
+    atualizarTextoCooldown(
+        botao,
+        segundosRestantes
+    );
+
+    const intervalo = window.setInterval(
+        () => {
+            segundosRestantes -= 1;
+
+            if (segundosRestantes <= 0) {
+                window.clearInterval(
+                    intervalo
+                );
+
+                botao.disabled = false;
+                botao.textContent =
+                    "Sincronizar inventário";
+
+                return;
+            }
+
+            atualizarTextoCooldown(
+                botao,
+                segundosRestantes
+            );
+        },
+        1000
+    );
+}
+
+function atualizarTextoCooldown(
+    botao,
+    segundos
+) {
+    botao.textContent =
+        `Sincronizar novamente em ${
+            formatarTempo(segundos)
+        }`;
+}
+
+function formatarTempo(segundos) {
+    const minutos = Math.floor(
+        segundos / 60
+    );
+
+    const restanteSegundos =
+        segundos % 60;
+
+    return (
+        `${minutos}:`
+        + `${String(
+            restanteSegundos
+        ).padStart(2, "0")}`
+    );
+}
+
+function formatarMensagemCooldown(
+    segundos
+) {
+    const minutos = Math.floor(
+        segundos / 60
+    );
+
+    const restanteSegundos =
+        segundos % 60;
+
+    if (minutos > 0) {
+        return (
+            "Aguarde "
+            + `${minutos} min `
+            + `${restanteSegundos} s `
+            + "antes de sincronizar novamente."
+        );
+    }
+
+    return (
+        `Aguarde ${restanteSegundos} s `
+        + "antes de sincronizar novamente."
+    );
+}
+
+function debounce(funcao, espera) {
+    let temporizador;
+
+    return (...argumentos) => {
+        window.clearTimeout(
+            temporizador
+        );
+
+        temporizador = window.setTimeout(
+            () => {
+                funcao(...argumentos);
+            },
+            espera
+        );
+    };
 }
