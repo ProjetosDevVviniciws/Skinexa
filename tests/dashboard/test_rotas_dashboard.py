@@ -320,6 +320,7 @@ def test_obter_inventario_retorna_json(
         usuario_id=1,
         pagina=1,
         itens_por_pagina=20,
+        busca=None,
     )
     
 @patch(
@@ -364,6 +365,7 @@ def test_obter_segunda_pagina_inventario(
         usuario_id=1,
         pagina=2,
         itens_por_pagina=20,
+        busca=None,
     )
     
 def test_inventario_bloqueia_usuario_anonimo(
@@ -432,7 +434,7 @@ def test_sincronizar_inventario_com_cooldown(
     mock_carregar_usuario,
     client,
 ):
-    """Retorna 429 quando o cooldown ainda está ativo."""
+    """Testa se a rota /dashboard/sincronizar-inventario retorna 429 quando o cooldown ainda está ativo."""
 
     mock_carregar_usuario.return_value = (
         criar_usuario_teste()
@@ -463,3 +465,152 @@ def test_sincronizar_inventario_com_cooldown(
     )
 
     assert dados["segundos_restantes"] == 75
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_busca(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna os itens do inventário filtrados pela busca corretamente."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        1,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&busca=AWP"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["busca"] == "AWP"
+    assert dados["pagina"] == 1
+    assert dados["total_itens"] == 1
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="AWP",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_busca_sem_resultados(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente quando a busca não encontra resultados."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        0,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1"
+        "&busca=xyznaoexiste123"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["busca"] == (
+        "xyznaoexiste123"
+    )
+
+    assert dados["itens"] == []
+    assert dados["total_itens"] == 0
+    assert dados["tem_anterior"] is False
+    assert dados["tem_proxima"] is False
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="xyznaoexiste123",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+def test_obter_inventario_paginado_com_busca(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a segunda página do inventário filtrada pela busca."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        45,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=2&busca=AWP"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["pagina"] == 2
+    assert dados["busca"] == "AWP"
+
+    assert dados["tem_anterior"] is True
+    assert dados["tem_proxima"] is True
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=2,
+        itens_por_pagina=20,
+        busca="AWP",
+    )
