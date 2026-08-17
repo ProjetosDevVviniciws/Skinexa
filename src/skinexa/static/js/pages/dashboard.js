@@ -5,15 +5,19 @@ import {
 const inventoryState = {
     pagina: 1,
     busca: "",
+    tipo: "",
 };
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
         configurarEventosInventario();
-        configurarSincronizacaoInventario();
-        carregarInventario();
         configurarPesquisaInventario();
+        configurarFiltroTipoInventario();
+        configurarSincronizacaoInventario();
+        
+        carregarTiposInventario();
+        carregarInventario();
     }
 );
 
@@ -76,6 +80,28 @@ function configurarPesquisaInventario() {
     );
 }
 
+function configurarFiltroTipoInventario() {
+    const select = document.querySelector(
+        "#inventory-type-select"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    select.addEventListener(
+        "change",
+        async () => {
+            inventoryState.tipo =
+                select.value.trim();
+
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
 function configurarSincronizacaoInventario() {
     const formulario = document.querySelector(
         "#inventory-sync-form"
@@ -95,6 +121,52 @@ function configurarSincronizacaoInventario() {
             );
         }
     );
+}
+
+async function carregarTiposInventario() {
+    const select = document.querySelector(
+        "#inventory-type-select"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    try {
+        const resposta = await fetch(
+            "/dashboard/inventario/tipos",
+            {
+                headers: {
+                    Accept: "application/json",
+                },
+            }
+        );
+
+        if (!resposta.ok) {
+            throw new Error(
+                "Não foi possível carregar os tipos."
+            );
+        }
+
+        const dados = await resposta.json();
+
+        for (const tipo of dados.tipos) {
+            const opcao = document.createElement(
+                "option"
+            );
+
+            opcao.value = tipo;
+            opcao.textContent = tipo;
+
+            select.appendChild(opcao);
+        }
+
+    } catch (erro) {
+        exibirToast(
+            "Não foi possível carregar os tipos do inventário.",
+            "error"
+        );
+    }
 }
 
 async function carregarInventario() {
@@ -126,6 +198,13 @@ async function carregarInventario() {
             parametros.set(
                 "busca",
                 inventoryState.busca
+            );
+        }
+
+        if (inventoryState.tipo) {
+            parametros.set(
+                "tipo",
+                inventoryState.tipo
             );
         }
 
