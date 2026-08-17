@@ -139,23 +139,6 @@ async function carregarInventario() {
         );
 
         if (!resposta.ok) {
-            if (
-                dados.codigo === "cooldown_sincronizacao"
-                && dados.segundos_restantes
-            ) {
-                cooldownAtivado = true;
-                iniciarCooldownVisual(
-                    dados.segundos_restantes
-                );
-                exibirToast(
-                    formatarMensagemCooldown(
-                        dados.segundos_restantes
-                    ),
-                    "warning"
-                );
-                return;
-            }
-
             throw new Error(
                 "Não foi possível carregar o inventário."
             );
@@ -218,6 +201,7 @@ async function sincronizarInventario(formulario) {
         if (!resposta.ok) {
             if (
                 resposta.status === 429
+                && dados.codigo === "cooldown_sincronizacao"
                 && dados.segundos_restantes
             ) {
                 cooldownAtivado = true;
