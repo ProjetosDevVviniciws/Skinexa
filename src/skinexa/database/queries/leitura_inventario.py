@@ -10,6 +10,7 @@ def listar_itens_inventario(
     limite: int = 20,
     deslocamento: int = 0,
     busca: str | None = None,
+    tipo_item: str | None = None,
 ) -> list[dict[str, Any]]:
     """Retorna os itens ativos do inventário do usuário."""
 
@@ -21,6 +22,15 @@ def listar_itens_inventario(
     
     if not busca_normalizada:
         busca_normalizada = None
+    
+    tipo_item_normalizado = (
+        tipo_item.strip()
+        if tipo_item is not None
+        else None
+    )
+    
+    if not tipo_item_normalizado:
+        tipo_item_normalizado = None
     
     consulta = text(
         """
@@ -65,6 +75,11 @@ def listar_itens_inventario(
             OR ic.nome_acabamento LIKE :busca_like
         )
         
+        AND (
+            :tipo_item IS NULL
+            OR ic.tipo_item = :tipo_item
+        )
+        
         ORDER BY ic.nome_mercado ASC
 
         LIMIT :limite
@@ -82,6 +97,7 @@ def listar_itens_inventario(
             if busca_normalizada
             else None
         ),
+        "tipo_item": tipo_item_normalizado,
     }   
 
     with engine.connect() as conexao:
@@ -99,6 +115,7 @@ def contar_itens_inventario(
     usuario_id: int,
     *,
     busca: str | None = None,
+    tipo_item: str | None = None,
 ) -> int:
     """Retorna a quantidade de itens ativos do usuário."""
 
@@ -110,6 +127,15 @@ def contar_itens_inventario(
 
     if not busca_normalizada:
         busca_normalizada = None
+    
+    tipo_item_normalizado = (
+        tipo_item.strip()
+        if tipo_item is not None
+        else None
+    )
+
+    if not tipo_item_normalizado:
+        tipo_item_normalizado = None
     
     consulta = text(
         """
@@ -129,6 +155,10 @@ def contar_itens_inventario(
             OR ic.nome_arma LIKE :busca_like
             OR ic.nome_acabamento LIKE :busca_like
           )
+          AND (
+            :tipo_item IS NULL
+            OR ic.tipo_item = :tipo_item
+          )
         """
     )
 
@@ -140,6 +170,7 @@ def contar_itens_inventario(
             if busca_normalizada
             else None
         ),
+        "tipo_item": tipo_item_normalizado,
     }
     
     with engine.connect() as conexao:
