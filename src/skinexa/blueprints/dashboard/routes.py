@@ -96,6 +96,7 @@ def obter_inventario():
             "pagina": pagina,
             "itens_por_pagina": itens_por_pagina,
             "busca": busca or "",
+            "tipo": tipo_item or "",
             "tem_anterior": pagina > 1,
             "tem_proxima": (
                 pagina * itens_por_pagina
