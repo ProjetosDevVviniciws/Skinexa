@@ -637,11 +637,13 @@ def test_listar_inventario_com_busca(
         limite=20,
         deslocamento=0,
         busca="AWP",
+        tipo_item=None,
     )
 
     mock_contar.assert_called_once_with(
         1,
         busca="AWP",
+        tipo_item=None,
     )
     
 @patch(
@@ -676,11 +678,13 @@ def test_listar_inventario_normaliza_busca(
         limite=20,
         deslocamento=0,
         busca="AWP",
+        tipo_item=None,
     )
 
     mock_contar.assert_called_once_with(
         1,
         busca="AWP",
+        tipo_item=None,
     )
     
 @patch(
@@ -714,9 +718,132 @@ def test_listar_inventario_trata_busca_vazia(
         limite=20,
         deslocamento=0,
         busca=None,
+        tipo_item=None,
     )
 
     mock_contar.assert_called_once_with(
         1,
         busca=None,
+        tipo_item=None,
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=3,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+)
+
+def test_listar_inventario_com_tipo(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a função de listar inventário lista corretamente os itens de acordo com o tipo selecionado."""
+    mock_listar.return_value = [
+        criar_registro_inventario_leitura()
+    ]
+
+    itens, total = InventarioService.listar_inventario(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        tipo_item="Rifle de Precisão",
+    )
+
+    assert total == 3
+    assert len(itens) == 1
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca=None,
+        tipo_item="Rifle de Precisão",
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca=None,
+        tipo_item="Rifle de Precisão",
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=2,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+)
+
+def test_listar_inventario_com_busca_e_tipo(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a função de listar inventário combina corretamente a pesquisa e o filtro por tipo."""
+
+    mock_listar.return_value = [
+        criar_registro_inventario_leitura()
+    ]
+
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="AWP",
+        tipo_item="Rifle de Precisão",
+    )
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca="AWP",
+        tipo_item="Rifle de Precisão",
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca="AWP",
+        tipo_item="Rifle de Precisão",
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+    return_value=[],
+)
+
+def test_listar_inventario_trata_tipo_vazio(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem de inventário trata filtro de tipo vazio como ausência de filtro."""
+
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        tipo_item="   ",
+    )
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca=None,
+        tipo_item=None,
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca=None,
+        tipo_item=None,
     )
