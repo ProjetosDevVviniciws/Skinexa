@@ -321,6 +321,7 @@ def test_obter_inventario_retorna_json(
         pagina=1,
         itens_por_pagina=20,
         busca=None,
+        tipo_item=None
     )
     
 @patch(
@@ -366,6 +367,7 @@ def test_obter_segunda_pagina_inventario(
         pagina=2,
         itens_por_pagina=20,
         busca=None,
+        tipo_item=None
     )
     
 def test_inventario_bloqueia_usuario_anonimo(
@@ -512,6 +514,7 @@ def test_obter_inventario_com_busca(
         pagina=1,
         itens_por_pagina=20,
         busca="AWP",
+        tipo_item=None
     )
     
 @patch(
@@ -565,6 +568,7 @@ def test_obter_inventario_busca_sem_resultados(
         pagina=1,
         itens_por_pagina=20,
         busca="xyznaoexiste123",
+        tipo_item=None
     )
     
 @patch(
@@ -575,6 +579,7 @@ def test_obter_inventario_busca_sem_resultados(
     "skinexa.blueprints.dashboard.routes."
     "InventarioService.listar_inventario",
 )
+
 def test_obter_inventario_paginado_com_busca(
     mock_listar_inventario,
     mock_carregar_usuario,
@@ -613,4 +618,151 @@ def test_obter_inventario_paginado_com_busca(
         pagina=2,
         itens_por_pagina=20,
         busca="AWP",
+        tipo_item=None,
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_tipo(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando filtro de tipo."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        3,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&tipo=Rifle%20de%20Precisão"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["tipo"] == "Rifle de Precisão"
+    assert dados["total_itens"] == 3
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item="Rifle de Precisão",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_busca_e_tipo(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando pesquisa e filtro de tipo na mesma consulta."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        2,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1"
+        "&busca=AWP"
+        "&tipo=Rifle%20de%20Precisão"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["busca"] == "AWP"
+    assert dados["tipo"] == "Rifle de Precisão"
+    assert dados["total_itens"] == 2
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="AWP",
+        tipo_item="Rifle de Precisão",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_tipos_inventario",
+)
+
+def test_obter_tipos_inventario(
+    mock_listar_tipos,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario/tipos retorna corretamente os tipos distintos do inventário."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_tipos.return_value = [
+        "Adesivo",
+        "Pistola",
+        "Rifle",
+        "Rifle de Precisão",
+    ]
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario/tipos"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["tipos"] == [
+        "Adesivo",
+        "Pistola",
+        "Rifle",
+        "Rifle de Precisão",
+    ]
+
+    mock_listar_tipos.assert_called_once_with(
+        usuario_id=1,
     )
