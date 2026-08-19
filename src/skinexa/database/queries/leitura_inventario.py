@@ -11,6 +11,7 @@ def listar_itens_inventario(
     deslocamento: int = 0,
     busca: str | None = None,
     tipo_item: str | None = None,
+    raridade: str | None = None,
 ) -> list[dict[str, Any]]:
     """Retorna os itens ativos do inventário do usuário."""
 
@@ -31,6 +32,15 @@ def listar_itens_inventario(
     
     if not tipo_item_normalizado:
         tipo_item_normalizado = None
+    
+    raridade_normalizada = (
+        raridade.strip()
+        if raridade is not None
+        else None
+    )
+
+    if not raridade_normalizada:
+        raridade_normalizada = None
     
     consulta = text(
         """
@@ -80,6 +90,11 @@ def listar_itens_inventario(
             OR ic.tipo_item = :tipo_item
         )
         
+        AND (
+            :raridade IS NULL
+            OR ic.raridade = :raridade
+        )
+        
         ORDER BY ic.nome_mercado ASC
 
         LIMIT :limite
@@ -98,6 +113,7 @@ def listar_itens_inventario(
             else None
         ),
         "tipo_item": tipo_item_normalizado,
+        "raridade": raridade_normalizada,
     }   
 
     with engine.connect() as conexao:
@@ -116,6 +132,7 @@ def contar_itens_inventario(
     *,
     busca: str | None = None,
     tipo_item: str | None = None,
+    raridade: str | None = None,
 ) -> int:
     """Retorna a quantidade de itens ativos do usuário."""
 
@@ -136,6 +153,15 @@ def contar_itens_inventario(
 
     if not tipo_item_normalizado:
         tipo_item_normalizado = None
+    
+    raridade_normalizada = (
+        raridade.strip()
+        if raridade is not None
+        else None
+    )
+
+    if not raridade_normalizada:
+        raridade_normalizada = None
     
     consulta = text(
         """
@@ -159,6 +185,11 @@ def contar_itens_inventario(
             :tipo_item IS NULL
             OR ic.tipo_item = :tipo_item
           )
+          
+          AND (
+            :raridade IS NULL
+            OR ic.raridade = :raridade
+          )
         """
     )
 
@@ -171,6 +202,7 @@ def contar_itens_inventario(
             else None
         ),
         "tipo_item": tipo_item_normalizado,
+        "raridade": raridade_normalizada,
     }
     
     with engine.connect() as conexao:
