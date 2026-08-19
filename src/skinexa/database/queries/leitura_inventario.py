@@ -248,7 +248,7 @@ def listar_tipos_itens_inventario(
         for tipo in resultado
     ]
     
-def listar_raridades_inventario(
+def listar_raridades_itens_inventario(
     usuario_id: int,
 ) -> list[str]:
     """Retorna as raridades distintas dos itens ativos do inventário."""
