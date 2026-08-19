@@ -247,3 +247,38 @@ def listar_tipos_itens_inventario(
         str(tipo)
         for tipo in resultado
     ]
+    
+def listar_raridades_inventario(
+    usuario_id: int,
+) -> list[str]:
+    """Retorna as raridades distintas dos itens ativos do inventário."""
+
+    consulta = text(
+        """
+        SELECT DISTINCT
+            ic.raridade
+
+        FROM instancias_itens AS ii
+
+        INNER JOIN itens_catalogo AS ic
+            ON ic.id = ii.item_catalogo_id
+
+        WHERE ii.usuario_id = :usuario_id
+          AND ii.ativo = 1
+          AND ic.raridade IS NOT NULL
+          AND TRIM(ic.raridade) <> ''
+
+        ORDER BY ic.raridade ASC
+        """
+    )
+
+    with engine.connect() as conexao:
+        resultado = conexao.execute(
+            consulta,
+            {"usuario_id": usuario_id},
+        ).scalars().all()
+
+    return [
+        str(raridade)
+        for raridade in resultado
+    ]
