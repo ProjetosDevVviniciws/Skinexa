@@ -24,7 +24,8 @@ from skinexa.integrations.steam.normalizador_inventario import (
 from skinexa.database.queries.leitura_inventario import (
     contar_itens_inventario,
     listar_itens_inventario,
-    listar_tipos_itens_inventario
+    listar_tipos_itens_inventario,
+    listar_raridades_itens_inventario
 )
 
 from skinexa.dto.steam.inventario import ItemInventarioDTO
@@ -191,6 +192,7 @@ class InventarioService:
         itens_por_pagina: int = 20,
         busca: str | None = None,
         tipo_item: str | None = None,
+        raridade: str | None = None,  
     ) -> tuple[list[ItemInventarioDTO], int]:
         """Retorna os itens do inventário e sua quantidade total."""
 
@@ -218,6 +220,15 @@ class InventarioService:
         if not tipo_item_normalizado:
             tipo_item_normalizado = None
         
+        raridade_normalizada = (
+            raridade.strip()
+            if raridade is not None
+            else None
+        )
+
+        if not raridade_normalizada:
+            raridade_normalizada = None
+        
         deslocamento = (
             pagina - 1
         ) * itens_por_pagina
@@ -227,7 +238,8 @@ class InventarioService:
             limite=itens_por_pagina,
             deslocamento=deslocamento,
             busca=busca_normalizada,
-            tipo_item=tipo_item_normalizado
+            tipo_item=tipo_item_normalizado,
+            raridade=raridade_normalizada,
         )
 
         itens = [
@@ -240,7 +252,8 @@ class InventarioService:
         total = contar_itens_inventario(
             usuario_id,
             busca=busca_normalizada,
-            tipo_item=tipo_item_normalizado
+            tipo_item=tipo_item_normalizado,
+            raridade=raridade_normalizada,
         )
 
         return itens, total
@@ -253,5 +266,16 @@ class InventarioService:
         """Retorna os tipos distintos de itens ativos do inventário."""
 
         return listar_tipos_itens_inventario(
+            usuario_id
+        )
+        
+    @staticmethod
+    def listar_raridades_inventario(
+        *,
+        usuario_id: int,
+    ) -> list[str]:
+        """Retorna as raridades distintas dos itens ativos."""
+
+        return listar_raridades_itens_inventario(
             usuario_id
         )
