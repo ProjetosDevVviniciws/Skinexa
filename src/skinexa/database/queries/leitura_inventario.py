@@ -12,6 +12,7 @@ def listar_itens_inventario(
     busca: str | None = None,
     tipo_item: str | None = None,
     raridade: str | None = None,
+    estado_exterior: str | None = None,
 ) -> list[dict[str, Any]]:
     """Retorna os itens ativos do inventário do usuário."""
 
@@ -41,6 +42,15 @@ def listar_itens_inventario(
 
     if not raridade_normalizada:
         raridade_normalizada = None
+    
+    estado_exterior_normalizado = (
+        estado_exterior.strip()
+        if estado_exterior is not None
+        else None
+    )
+
+    if not estado_exterior_normalizado:
+        estado_exterior_normalizado = None
     
     consulta = text(
         """
@@ -95,6 +105,11 @@ def listar_itens_inventario(
             OR ic.raridade = :raridade
         )
         
+        AND (
+            :estado_exterior IS NULL
+            OR ic.estado_exterior = :estado_exterior
+        )
+        
         ORDER BY ic.nome_mercado ASC
 
         LIMIT :limite
@@ -114,6 +129,7 @@ def listar_itens_inventario(
         ),
         "tipo_item": tipo_item_normalizado,
         "raridade": raridade_normalizada,
+        "estado_exterior": estado_exterior_normalizado,
     }   
 
     with engine.connect() as conexao:
@@ -133,6 +149,7 @@ def contar_itens_inventario(
     busca: str | None = None,
     tipo_item: str | None = None,
     raridade: str | None = None,
+    estado_exterior: str | None = None,
 ) -> int:
     """Retorna a quantidade de itens ativos do usuário."""
 
@@ -163,6 +180,15 @@ def contar_itens_inventario(
     if not raridade_normalizada:
         raridade_normalizada = None
     
+    estado_exterior_normalizado = (
+        estado_exterior.strip()
+        if estado_exterior is not None
+        else None
+    )
+
+    if not estado_exterior_normalizado:
+        estado_exterior_normalizado = None
+    
     consulta = text(
         """
         SELECT COUNT(*)
@@ -190,6 +216,11 @@ def contar_itens_inventario(
             :raridade IS NULL
             OR ic.raridade = :raridade
           )
+          
+          AND (
+            :estado_exterior IS NULL
+            OR ic.estado_exterior = :estado_exterior
+          )
         """
     )
 
@@ -203,6 +234,7 @@ def contar_itens_inventario(
         ),
         "tipo_item": tipo_item_normalizado,
         "raridade": raridade_normalizada,
+        "estado_exterior": estado_exterior_normalizado,
     }
     
     with engine.connect() as conexao:
@@ -281,4 +313,39 @@ def listar_raridades_itens_inventario(
     return [
         str(raridade)
         for raridade in resultado
+    ]
+    
+def listar_estados_exteriores_inventario(
+    usuario_id: int,
+) -> list[str]:
+    """Retorna os estados exteriores distintos dos itens ativos."""
+
+    consulta = text(
+        """
+        SELECT DISTINCT
+            ic.estado_exterior
+
+        FROM instancias_itens AS ii
+
+        INNER JOIN itens_catalogo AS ic
+            ON ic.id = ii.item_catalogo_id
+
+        WHERE ii.usuario_id = :usuario_id
+          AND ii.ativo = 1
+          AND ic.estado_exterior IS NOT NULL
+          AND TRIM(ic.estado_exterior) <> ''
+
+        ORDER BY ic.estado_exterior ASC
+        """
+    )
+
+    with engine.connect() as conexao:
+        resultado = conexao.execute(
+            consulta,
+            {"usuario_id": usuario_id},
+        ).scalars().all()
+
+    return [
+        str(estado)
+        for estado in resultado
     ]
