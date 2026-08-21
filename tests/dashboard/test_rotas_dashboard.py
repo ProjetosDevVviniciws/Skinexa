@@ -321,7 +321,8 @@ def test_obter_inventario_retorna_json(
         pagina=1,
         itens_por_pagina=20,
         busca=None,
-        tipo_item=None
+        tipo_item=None,
+        raridade=None,
     )
     
 @patch(
@@ -367,7 +368,8 @@ def test_obter_segunda_pagina_inventario(
         pagina=2,
         itens_por_pagina=20,
         busca=None,
-        tipo_item=None
+        tipo_item=None,
+        raridade=None,
     )
     
 def test_inventario_bloqueia_usuario_anonimo(
@@ -514,7 +516,8 @@ def test_obter_inventario_com_busca(
         pagina=1,
         itens_por_pagina=20,
         busca="AWP",
-        tipo_item=None
+        tipo_item=None,
+        raridade=None,
     )
     
 @patch(
@@ -568,7 +571,8 @@ def test_obter_inventario_busca_sem_resultados(
         pagina=1,
         itens_por_pagina=20,
         busca="xyznaoexiste123",
-        tipo_item=None
+        tipo_item=None,
+        raridade=None,
     )
     
 @patch(
@@ -619,6 +623,7 @@ def test_obter_inventario_paginado_com_busca(
         itens_por_pagina=20,
         busca="AWP",
         tipo_item=None,
+        raridade=None,
     )
     
 @patch(
@@ -635,7 +640,7 @@ def test_obter_inventario_com_tipo(
     mock_carregar_usuario,
     client,
 ):
-    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando filtro de tipo."""
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando filtro por tipo."""
 
     mock_carregar_usuario.return_value = (
         criar_usuario_teste()
@@ -666,6 +671,7 @@ def test_obter_inventario_com_tipo(
         itens_por_pagina=20,
         busca=None,
         tipo_item="Rifle de Precisão",
+        raridade=None,
     )
     
 @patch(
@@ -682,7 +688,7 @@ def test_obter_inventario_com_busca_e_tipo(
     mock_carregar_usuario,
     client,
 ):
-    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando pesquisa e filtro de tipo na mesma consulta."""
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando pesquisa e filtro por tipo na mesma consulta."""
 
     mock_carregar_usuario.return_value = (
         criar_usuario_teste()
@@ -716,6 +722,7 @@ def test_obter_inventario_com_busca_e_tipo(
         itens_por_pagina=20,
         busca="AWP",
         tipo_item="Rifle de Precisão",
+        raridade=None,
     )
     
 @patch(
@@ -764,5 +771,151 @@ def test_obter_tipos_inventario(
     ]
 
     mock_listar_tipos.assert_called_once_with(
+        usuario_id=1,
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_raridade(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando filtro por raridade."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        1,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&raridade=Oculto"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["raridade"] == "Oculto"
+    assert dados["total_itens"] == 1
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade="Oculto",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_busca_tipo_e_raridade(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando busca, filtro por tipo e raridade na mesma consulta."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        1,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1"
+        "&busca=AWP"
+        "&tipo=Rifle%20de%20Precisão"
+        "&raridade=Oculto"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["busca"] == "AWP"
+    assert dados["tipo"] == "Rifle de Precisão"
+    assert dados["raridade"] == "Oculto"
+    assert dados["total_itens"] == 1
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="AWP",
+        tipo_item="Rifle de Precisão",
+        raridade="Oculto",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_raridades_inventario",
+)
+def test_obter_raridades_inventario(
+    mock_listar_raridades,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario/raridades retorna corretamente as raridades distintas do inventário."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_raridades.return_value = [
+        "Alta Qualidade",
+        "Oculto",
+        "Restrito",
+        "Secreto",
+    ]
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario/raridades"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["raridades"] == [
+        "Alta Qualidade",
+        "Oculto",
+        "Restrito",
+        "Secreto",
+    ]
+
+    mock_listar_raridades.assert_called_once_with(
         usuario_id=1,
     )
