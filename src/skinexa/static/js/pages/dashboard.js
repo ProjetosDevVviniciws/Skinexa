@@ -6,6 +6,7 @@ const inventoryState = {
     pagina: 1,
     busca: "",
     tipo: "",
+    raridade: "",
 };
 
 document.addEventListener(
@@ -14,9 +15,11 @@ document.addEventListener(
         configurarEventosInventario();
         configurarPesquisaInventario();
         configurarFiltroTipoInventario();
+        configurarFiltroRaridadeInventario();
         configurarSincronizacaoInventario();
         
         carregarTiposInventario();
+        carregarRaridadesInventario();
         carregarInventario();
     }
 );
@@ -102,6 +105,28 @@ function configurarFiltroTipoInventario() {
     );
 }
 
+function configurarFiltroRaridadeInventario() {
+    const select = document.querySelector(
+        "#inventory-rarity-select"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    select.addEventListener(
+        "change",
+        async () => {
+            inventoryState.raridade =
+                select.value.trim();
+
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
 function configurarSincronizacaoInventario() {
     const formulario = document.querySelector(
         "#inventory-sync-form"
@@ -169,6 +194,52 @@ async function carregarTiposInventario() {
     }
 }
 
+async function carregarRaridadesInventario() {
+    const select = document.querySelector(
+        "#inventory-rarity-select"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    try {
+        const resposta = await fetch(
+            "/dashboard/inventario/raridades",
+            {
+                headers: {
+                    Accept: "application/json",
+                },
+            }
+        );
+
+        if (!resposta.ok) {
+            throw new Error(
+                "Não foi possível carregar as raridades."
+            );
+        }
+
+        const dados = await resposta.json();
+
+        for (const raridade of dados.raridades) {
+            const opcao = document.createElement(
+                "option"
+            );
+
+            opcao.value = raridade;
+            opcao.textContent = raridade;
+
+            select.appendChild(opcao);
+        }
+
+    } catch (erro) {
+        exibirToast(
+            "Não foi possível carregar as raridades do inventário.",
+            "error"
+        );
+    }
+}
+
 async function carregarInventario() {
     const container = document.querySelector(
         "#inventory-list"
@@ -205,6 +276,13 @@ async function carregarInventario() {
             parametros.set(
                 "tipo",
                 inventoryState.tipo
+            );
+        }
+
+        if (inventoryState.raridade) {
+            parametros.set(
+                "raridade",
+                inventoryState.raridade
             );
         }
 
@@ -340,7 +418,7 @@ function renderizarInventario(
         );
 
         if (inventoryState.busca) {
-        mensagem.textContent =
+            mensagem.textContent =
             `Nenhum item encontrado para "${inventoryState.busca}".`;
         } else {
             mensagem.textContent =
