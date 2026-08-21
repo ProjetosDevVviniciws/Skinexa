@@ -14,7 +14,7 @@ from skinexa.database.queries.itens_catalogo import (
 )
 
 from skinexa.integrations.steam.inventario import (
-    buscar_inventario_publico
+    buscar_inventario_publico,
 )
 
 from skinexa.integrations.steam.normalizador_inventario import (
@@ -25,7 +25,8 @@ from skinexa.database.queries.leitura_inventario import (
     contar_itens_inventario,
     listar_itens_inventario,
     listar_tipos_itens_inventario,
-    listar_raridades_itens_inventario
+    listar_raridades_itens_inventario,
+    listar_estados_exteriores_inventario,
 )
 
 from skinexa.dto.steam.inventario import ItemInventarioDTO
@@ -192,7 +193,8 @@ class InventarioService:
         itens_por_pagina: int = 20,
         busca: str | None = None,
         tipo_item: str | None = None,
-        raridade: str | None = None,  
+        raridade: str | None = None,
+        estado_exterior: str | None = None,
     ) -> tuple[list[ItemInventarioDTO], int]:
         """Retorna os itens do inventário e sua quantidade total."""
 
@@ -229,6 +231,15 @@ class InventarioService:
         if not raridade_normalizada:
             raridade_normalizada = None
         
+        estado_exterior_normalizado = (
+            estado_exterior.strip()
+            if estado_exterior is not None
+            else None
+        )
+
+        if not estado_exterior_normalizado:
+            estado_exterior_normalizado = None
+        
         deslocamento = (
             pagina - 1
         ) * itens_por_pagina
@@ -240,6 +251,7 @@ class InventarioService:
             busca=busca_normalizada,
             tipo_item=tipo_item_normalizado,
             raridade=raridade_normalizada,
+            estado_exterior=estado_exterior_normalizado,
         )
 
         itens = [
@@ -254,6 +266,7 @@ class InventarioService:
             busca=busca_normalizada,
             tipo_item=tipo_item_normalizado,
             raridade=raridade_normalizada,
+            estado_exterior=estado_exterior_normalizado,
         )
 
         return itens, total
@@ -277,5 +290,16 @@ class InventarioService:
         """Retorna as raridades distintas dos itens ativos."""
 
         return listar_raridades_itens_inventario(
+            usuario_id
+        )
+        
+    @staticmethod
+    def listar_estados_inventario(
+        *,
+        usuario_id: int,
+    ) -> list[str]:
+        """Retorna os estados exteriores distintos dos itens ativos."""
+
+        return listar_estados_exteriores_inventario(
             usuario_id
         )
