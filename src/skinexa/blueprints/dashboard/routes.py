@@ -53,6 +53,12 @@ def obter_inventario():
         type=str,
     )
     
+    raridade = request.args.get(
+        "raridade",
+        default=None,
+        type=str,
+    )
+    
     itens_por_pagina = 20
 
     itens, total_itens = (
@@ -61,7 +67,8 @@ def obter_inventario():
             pagina=pagina,
             itens_por_pagina=itens_por_pagina,
             busca=busca,
-            tipo_item=tipo_item
+            tipo_item=tipo_item,
+            raridade=raridade,
         )
     )
 
@@ -97,6 +104,7 @@ def obter_inventario():
             "itens_por_pagina": itens_por_pagina,
             "busca": busca or "",
             "tipo": tipo_item or "",
+            "raridade": raridade or "",
             "tem_anterior": pagina > 1,
             "tem_proxima": (
                 pagina * itens_por_pagina
@@ -210,5 +218,22 @@ def obter_tipos_inventario():
     return jsonify(
         {
             "tipos": tipos,
+        }
+    )
+    
+@dashboard_bp.get("/inventario/raridades")
+@login_required
+def obter_raridades_inventario():
+    """Retorna as raridades distintas dos itens ativos."""
+
+    raridades = (
+        InventarioService.listar_raridades_inventario(
+            usuario_id=current_user.id,
+        )
+    )
+
+    return jsonify(
+        {
+            "raridades": raridades,
         }
     )
