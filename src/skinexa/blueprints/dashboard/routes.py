@@ -15,6 +15,10 @@ from skinexa.exceptions.inventario import (
     CooldownSincronizacaoAtivo,
 )
 
+from skinexa.utils.conversores import (
+    converter_booleano_query,
+)
+
 dashboard_bp = Blueprint(
     "dashboard",
     __name__,
@@ -65,6 +69,14 @@ def obter_inventario():
         type=str,
     )
     
+    stattrak = converter_booleano_query(
+        request.args.get("stattrak")
+    )
+
+    souvenir = converter_booleano_query(
+        request.args.get("souvenir")
+    )
+    
     itens_por_pagina = 20
 
     itens, total_itens = (
@@ -76,6 +88,8 @@ def obter_inventario():
             tipo_item=tipo_item,
             raridade=raridade,
             estado_exterior=estado_exterior,
+            stattrak=stattrak,
+            souvenir=souvenir,
         )
     )
 
@@ -113,6 +127,8 @@ def obter_inventario():
             "tipo": tipo_item or "",
             "raridade": raridade or "",
             "estado": estado_exterior or "",
+            "stattrak": stattrak,
+            "souvenir": souvenir,
             "tem_anterior": pagina > 1,
             "tem_proxima": (
                 pagina * itens_por_pagina
