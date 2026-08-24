@@ -195,6 +195,8 @@ class InventarioService:
         tipo_item: str | None = None,
         raridade: str | None = None,
         estado_exterior: str | None = None,
+        stattrak: bool | None = None,
+        souvenir: bool | None = None,
     ) -> tuple[list[ItemInventarioDTO], int]:
         """Retorna os itens do inventário e sua quantidade total."""
 
@@ -252,6 +254,8 @@ class InventarioService:
             tipo_item=tipo_item_normalizado,
             raridade=raridade_normalizada,
             estado_exterior=estado_exterior_normalizado,
+            stattrak=stattrak,
+            souvenir=souvenir,
         )
 
         itens = [
@@ -267,6 +271,8 @@ class InventarioService:
             tipo_item=tipo_item_normalizado,
             raridade=raridade_normalizada,
             estado_exterior=estado_exterior_normalizado,
+            stattrak=stattrak,
+            souvenir=souvenir,
         )
 
         return itens, total
