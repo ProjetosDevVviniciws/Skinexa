@@ -13,6 +13,8 @@ def listar_itens_inventario(
     tipo_item: str | None = None,
     raridade: str | None = None,
     estado_exterior: str | None = None,
+    stattrak: bool | None = None,
+    souvenir: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Retorna os itens ativos do inventário do usuário."""
 
@@ -110,6 +112,16 @@ def listar_itens_inventario(
             OR ic.estado_exterior = :estado_exterior
         )
         
+        AND (
+            :stattrak IS NULL
+            OR ii.stattrak = :stattrak
+        )
+
+        AND (
+            :souvenir IS NULL
+            OR ii.souvenir = :souvenir
+        )
+        
         ORDER BY ic.nome_mercado ASC
 
         LIMIT :limite
@@ -130,6 +142,8 @@ def listar_itens_inventario(
         "tipo_item": tipo_item_normalizado,
         "raridade": raridade_normalizada,
         "estado_exterior": estado_exterior_normalizado,
+        "stattrak": stattrak,
+        "souvenir": souvenir,
     }   
 
     with engine.connect() as conexao:
@@ -150,6 +164,8 @@ def contar_itens_inventario(
     tipo_item: str | None = None,
     raridade: str | None = None,
     estado_exterior: str | None = None,
+    stattrak: bool | None = None,
+    souvenir: bool | None = None,
 ) -> int:
     """Retorna a quantidade de itens ativos do usuário."""
 
@@ -221,6 +237,16 @@ def contar_itens_inventario(
             :estado_exterior IS NULL
             OR ic.estado_exterior = :estado_exterior
           )
+          
+          AND (
+            :stattrak IS NULL
+            OR ii.stattrak = :stattrak
+          )
+
+          AND (
+            :souvenir IS NULL
+            OR ii.souvenir = :souvenir
+          )
         """
     )
 
@@ -235,6 +261,8 @@ def contar_itens_inventario(
         "tipo_item": tipo_item_normalizado,
         "raridade": raridade_normalizada,
         "estado_exterior": estado_exterior_normalizado,
+        "stattrak": stattrak,
+        "souvenir": souvenir,
     }
     
     with engine.connect() as conexao:
