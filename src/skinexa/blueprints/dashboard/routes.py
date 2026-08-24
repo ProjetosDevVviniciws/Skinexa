@@ -59,6 +59,12 @@ def obter_inventario():
         type=str,
     )
     
+    estado_exterior = request.args.get(
+        "estado",
+        default=None,
+        type=str,
+    )
+    
     itens_por_pagina = 20
 
     itens, total_itens = (
@@ -69,6 +75,7 @@ def obter_inventario():
             busca=busca,
             tipo_item=tipo_item,
             raridade=raridade,
+            estado_exterior=estado_exterior,
         )
     )
 
@@ -105,6 +112,7 @@ def obter_inventario():
             "busca": busca or "",
             "tipo": tipo_item or "",
             "raridade": raridade or "",
+            "estado": estado_exterior or "",
             "tem_anterior": pagina > 1,
             "tem_proxima": (
                 pagina * itens_por_pagina
@@ -235,5 +243,22 @@ def obter_raridades_inventario():
     return jsonify(
         {
             "raridades": raridades,
+        }
+    )
+    
+@dashboard_bp.get("/inventario/estados")
+@login_required
+def obter_estados_inventario():
+    """Retorna os estados exteriores distintos dos itens ativos."""
+
+    estados = (
+        InventarioService.listar_estados_inventario(
+            usuario_id=current_user.id,
+        )
+    )
+
+    return jsonify(
+        {
+            "estados": estados,
         }
     )
