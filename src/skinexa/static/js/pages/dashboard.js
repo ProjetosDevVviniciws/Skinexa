@@ -7,6 +7,7 @@ const inventoryState = {
     busca: "",
     tipo: "",
     raridade: "",
+    estador: "",
 };
 
 document.addEventListener(
@@ -16,10 +17,12 @@ document.addEventListener(
         configurarPesquisaInventario();
         configurarFiltroTipoInventario();
         configurarFiltroRaridadeInventario();
+        configurarFiltroEstadoInventario();
         configurarSincronizacaoInventario();
         
         carregarTiposInventario();
         carregarRaridadesInventario();
+        carregarEstadosInventario();
         carregarInventario();
     }
 );
@@ -118,6 +121,28 @@ function configurarFiltroRaridadeInventario() {
         "change",
         async () => {
             inventoryState.raridade =
+                select.value.trim();
+
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
+function configurarFiltroEstadoInventario() {
+    const select = document.querySelector(
+        "#inventory-exterior-select"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    select.addEventListener(
+        "change",
+        async () => {
+            inventoryState.estado =
                 select.value.trim();
 
             inventoryState.pagina = 1;
@@ -240,6 +265,52 @@ async function carregarRaridadesInventario() {
     }
 }
 
+async function carregarEstadosInventario() {
+    const select = document.querySelector(
+        "#inventory-exterior-select"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    try {
+        const resposta = await fetch(
+            "/dashboard/inventario/estados",
+            {
+                headers: {
+                    Accept: "application/json",
+                },
+            }
+        );
+
+        if (!resposta.ok) {
+            throw new Error(
+                "Não foi possível carregar os estados exteriores."
+            );
+        }
+
+        const dados = await resposta.json();
+
+        for (const estado of dados.estados) {
+            const opcao = document.createElement(
+                "option"
+            );
+
+            opcao.value = estado;
+            opcao.textContent = estado;
+
+            select.appendChild(opcao);
+        }
+
+    } catch (erro) {
+        exibirToast(
+            "Não foi possível carregar os estados do inventário.",
+            "error"
+        );
+    }
+}
+
 async function carregarInventario() {
     const container = document.querySelector(
         "#inventory-list"
@@ -283,6 +354,13 @@ async function carregarInventario() {
             parametros.set(
                 "raridade",
                 inventoryState.raridade
+            );
+        }
+
+        if (inventoryState.estado) {
+            parametros.set(
+                "estado",
+                inventoryState.estado
             );
         }
 
