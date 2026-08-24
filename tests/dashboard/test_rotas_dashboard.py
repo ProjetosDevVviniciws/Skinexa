@@ -323,6 +323,7 @@ def test_obter_inventario_retorna_json(
         busca=None,
         tipo_item=None,
         raridade=None,
+        estado_exterior=None
     )
     
 @patch(
@@ -370,6 +371,7 @@ def test_obter_segunda_pagina_inventario(
         busca=None,
         tipo_item=None,
         raridade=None,
+        estado_exterior=None,
     )
     
 def test_inventario_bloqueia_usuario_anonimo(
@@ -518,6 +520,7 @@ def test_obter_inventario_com_busca(
         busca="AWP",
         tipo_item=None,
         raridade=None,
+        estado_exterior=None,
     )
     
 @patch(
@@ -573,6 +576,7 @@ def test_obter_inventario_busca_sem_resultados(
         busca="xyznaoexiste123",
         tipo_item=None,
         raridade=None,
+        estado_exterior=None,
     )
     
 @patch(
@@ -624,6 +628,7 @@ def test_obter_inventario_paginado_com_busca(
         busca="AWP",
         tipo_item=None,
         raridade=None,
+        estado_exterior=None,
     )
     
 @patch(
@@ -672,6 +677,7 @@ def test_obter_inventario_com_tipo(
         busca=None,
         tipo_item="Rifle de Precisão",
         raridade=None,
+        estado_exterior=None,
     )
     
 @patch(
@@ -723,6 +729,7 @@ def test_obter_inventario_com_busca_e_tipo(
         busca="AWP",
         tipo_item="Rifle de Precisão",
         raridade=None,
+        estado_exterior=None,
     )
     
 @patch(
@@ -819,6 +826,7 @@ def test_obter_inventario_com_raridade(
         busca=None,
         tipo_item=None,
         raridade="Oculto",
+        estado_exterior=None,
     )
     
 @patch(
@@ -871,6 +879,7 @@ def test_obter_inventario_com_busca_tipo_e_raridade(
         busca="AWP",
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
+        estado_exterior=None,
     )
     
 @patch(
@@ -917,5 +926,162 @@ def test_obter_raridades_inventario(
     ]
 
     mock_listar_raridades.assert_called_once_with(
+        usuario_id=1,
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_estado(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando filtro por estado."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        5,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1"
+        "&estado=Testada%20em%20Campo"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["estado"] == "Testada em Campo"
+    assert dados["total_itens"] == 5
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior="Testada em Campo",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_todos_os_filtros(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario retorna corretamente a primeira página do inventário utilizando todos os filtros na mesma consulta."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        1,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1"
+        "&busca=AWP"
+        "&tipo=Rifle%20de%20Precisão"
+        "&raridade=Oculto"
+        "&estado=Testada%20em%20Campo"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["busca"] == "AWP"
+    assert dados["tipo"] == "Rifle de Precisão"
+    assert dados["raridade"] == "Oculto"
+    assert dados["estado"] == "Testada em Campo"
+    assert dados["total_itens"] == 1
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca="AWP",
+        tipo_item="Rifle de Precisão",
+        raridade="Oculto",
+        estado_exterior="Testada em Campo",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_estados_inventario",
+)
+
+def test_obter_estados_inventario(
+    mock_listar_estados,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario/estados retorna corretamente os estados distintos do inventário."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_estados.return_value = [
+        "Não pintado",
+        "Nova de Fábrica",
+        "Pouco Usada",
+        "Testada em Campo",
+        "Veterana de Guerra",
+    ]
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario/estados"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["estados"] == [
+        "Não pintado",
+        "Nova de Fábrica",
+        "Pouco Usada",
+        "Testada em Campo",
+        "Veterana de Guerra",
+    ]
+
+    mock_listar_estados.assert_called_once_with(
         usuario_id=1,
     )
