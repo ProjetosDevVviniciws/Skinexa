@@ -8,6 +8,8 @@ const inventoryState = {
     tipo: "",
     raridade: "",
     estador: "",
+    stattrak: false,
+    souvenir: false,
 };
 
 document.addEventListener(
@@ -18,6 +20,8 @@ document.addEventListener(
         configurarFiltroTipoInventario();
         configurarFiltroRaridadeInventario();
         configurarFiltroEstadoInventario();
+        configurarFiltroStatTrakInventario();
+        configurarFiltroSouvenirInventario();
         configurarSincronizacaoInventario();
         
         carregarTiposInventario();
@@ -144,6 +148,50 @@ function configurarFiltroEstadoInventario() {
         async () => {
             inventoryState.estado =
                 select.value.trim();
+
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
+function configurarFiltroStatTrakInventario() {
+    const checkbox = document.querySelector(
+        "#inventory-stattrak-filter"
+    );
+
+    if (!checkbox) {
+        return;
+    }
+
+    checkbox.addEventListener(
+        "change",
+        async () => {
+            inventoryState.stattrak =
+                checkbox.checked;
+
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
+function configurarFiltroSouvenirInventario() {
+    const checkbox = document.querySelector(
+        "#inventory-souvenir-filter"
+    );
+
+    if (!checkbox) {
+        return;
+    }
+
+    checkbox.addEventListener(
+        "change",
+        async () => {
+            inventoryState.souvenir =
+                checkbox.checked;
 
             inventoryState.pagina = 1;
 
@@ -361,6 +409,20 @@ async function carregarInventario() {
             parametros.set(
                 "estado",
                 inventoryState.estado
+            );
+        }
+
+        if (inventoryState.stattrak) {
+            parametros.set(
+                "stattrak",
+                "1"
+            );
+        }
+
+        if (inventoryState.souvenir) {
+            parametros.set(
+                "souvenir",
+                "1"
             );
         }
 
