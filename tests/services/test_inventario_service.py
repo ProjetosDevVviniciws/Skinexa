@@ -640,6 +640,8 @@ def test_listar_inventario_com_busca(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -648,6 +650,8 @@ def test_listar_inventario_com_busca(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -685,6 +689,8 @@ def test_listar_inventario_normaliza_busca(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -693,6 +699,8 @@ def test_listar_inventario_normaliza_busca(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -729,6 +737,8 @@ def test_listar_inventario_trata_busca_vazia(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -737,6 +747,8 @@ def test_listar_inventario_trata_busca_vazia(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -776,6 +788,8 @@ def test_listar_inventario_com_tipo(
         tipo_item="Rifle de Precisão",
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -784,6 +798,8 @@ def test_listar_inventario_com_tipo(
         tipo_item="Rifle de Precisão",
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -824,6 +840,8 @@ def test_listar_inventario_com_busca_e_tipo(
         tipo_item="Rifle de Precisão",
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -832,6 +850,8 @@ def test_listar_inventario_com_busca_e_tipo(
         tipo_item="Rifle de Precisão",
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -864,6 +884,8 @@ def test_listar_inventario_trata_tipo_vazio(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -872,6 +894,8 @@ def test_listar_inventario_trata_tipo_vazio(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -911,6 +935,8 @@ def test_listar_inventario_com_raridade(
         tipo_item=None,
         raridade="Oculto",
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -919,6 +945,8 @@ def test_listar_inventario_com_raridade(
         tipo_item=None,
         raridade="Oculto",
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
 @patch(
@@ -957,7 +985,9 @@ def test_listar_inventario_com_busca_tipo_e_raridade(
         busca="AWP",
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
-        estado_exterior=None,        
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=None,        
     )
 
     mock_contar.assert_called_once_with(
@@ -966,6 +996,8 @@ def test_listar_inventario_com_busca_tipo_e_raridade(
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -997,6 +1029,8 @@ def test_listar_inventario_trata_raridade_vazia(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -1005,6 +1039,8 @@ def test_listar_inventario_trata_raridade_vazia(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -1047,6 +1083,8 @@ def test_listar_inventario_com_estado_exterior(
         tipo_item=None,
         raridade=None,
         estado_exterior="Testada em Campo",
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -1055,6 +1093,8 @@ def test_listar_inventario_com_estado_exterior(
         tipo_item=None,
         raridade=None,
         estado_exterior="Testada em Campo",
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -1095,6 +1135,8 @@ def test_listar_inventario_com_todos_os_filtros(
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
         estado_exterior="Testada em Campo",
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -1103,6 +1145,8 @@ def test_listar_inventario_com_todos_os_filtros(
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
         estado_exterior="Testada em Campo",
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -1135,6 +1179,8 @@ def test_listar_inventario_trata_estado_exterior_vazio(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
 
     mock_contar.assert_called_once_with(
@@ -1143,4 +1189,145 @@ def test_listar_inventario_trata_estado_exterior_vazio(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+    return_value=[],
+)
+
+def test_listar_inventario_com_stattrak(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem do inventário aplica corretamente o filtro StatTrak."""
+    itens, total = InventarioService.listar_inventario(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        stattrak=True,
+    )
+
+    assert itens == []
+    assert total == 0
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=True,
+        souvenir=None,
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=True,
+        souvenir=None,
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+    return_value=[],
+)
+
+def test_listar_inventario_com_souvenir(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem do inventário aplica corretamente o filtro Souvenir."""
+    itens, total = InventarioService.listar_inventario(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        souvenir=True,
+    )
+
+    assert itens == []
+    assert total == 0
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=True,
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=True,
+    )
+    
+@patch(
+    "skinexa.services.inventory.service."
+    "contar_itens_inventario",
+    return_value=35,
+)
+@patch(
+    "skinexa.services.inventory.service."
+    "listar_itens_inventario",
+    return_value=[],
+)
+
+def test_listar_inventario_preserva_stattrak_false(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem do inventário preserva corretamente o filtro StatTrak como falso."""
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        stattrak=False,
+    )
+
+    mock_listar.assert_called_once_with(
+        1,
+        limite=20,
+        deslocamento=0,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=False,
+        souvenir=None,
+    )
+
+    mock_contar.assert_called_once_with(
+        1,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=False,
+        souvenir=None,
     )
