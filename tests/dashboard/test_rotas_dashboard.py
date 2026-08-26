@@ -323,7 +323,9 @@ def test_obter_inventario_retorna_json(
         busca=None,
         tipo_item=None,
         raridade=None,
-        estado_exterior=None
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -372,6 +374,8 @@ def test_obter_segunda_pagina_inventario(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 def test_inventario_bloqueia_usuario_anonimo(
@@ -521,6 +525,8 @@ def test_obter_inventario_com_busca(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -577,6 +583,8 @@ def test_obter_inventario_busca_sem_resultados(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -629,6 +637,8 @@ def test_obter_inventario_paginado_com_busca(
         tipo_item=None,
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -678,6 +688,8 @@ def test_obter_inventario_com_tipo(
         tipo_item="Rifle de Precisão",
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -730,6 +742,8 @@ def test_obter_inventario_com_busca_e_tipo(
         tipo_item="Rifle de Precisão",
         raridade=None,
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -827,6 +841,8 @@ def test_obter_inventario_com_raridade(
         tipo_item=None,
         raridade="Oculto",
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -880,6 +896,8 @@ def test_obter_inventario_com_busca_tipo_e_raridade(
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
         estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -977,6 +995,8 @@ def test_obter_inventario_com_estado(
         tipo_item=None,
         raridade=None,
         estado_exterior="Testada em Campo",
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -1033,6 +1053,8 @@ def test_obter_inventario_com_todos_os_filtros(
         tipo_item="Rifle de Precisão",
         raridade="Oculto",
         estado_exterior="Testada em Campo",
+        stattrak=None,
+        souvenir=None,
     )
     
 @patch(
@@ -1084,4 +1106,141 @@ def test_obter_estados_inventario(
 
     mock_listar_estados.assert_called_once_with(
         usuario_id=1,
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_stattrak(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario aplica corretamente o filtro StatTrak."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        0,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&stattrak=1"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["stattrak"] is True
+    assert dados["souvenir"] is None
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=True,
+        souvenir=None,
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_souvenir(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario aplica corretamente o filtro Souvenir."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        0,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&souvenir=1"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["souvenir"] is True
+    assert dados["stattrak"] is None
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_stattrak_false(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario preserva corretamente o filtro StatTrak como falso."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        35,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&stattrak=0"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["stattrak"] is False
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=False,
+        souvenir=None,
     )
