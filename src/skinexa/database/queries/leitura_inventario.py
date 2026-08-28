@@ -15,6 +15,7 @@ def listar_itens_inventario(
     estado_exterior: str | None = None,
     stattrak: bool | None = None,
     souvenir: bool | None = None,
+    ordenacao: str = "nome_asc",
 ) -> list[dict[str, Any]]:
     """Retorna os itens ativos do inventário do usuário."""
 
@@ -54,8 +55,18 @@ def listar_itens_inventario(
     if not estado_exterior_normalizado:
         estado_exterior_normalizado = None
     
+    ordenacoes_permitidas = {
+        "nome_asc": "ic.nome_mercado ASC",
+        "nome_desc": "ic.nome_mercado DESC",
+    }
+
+    ordenacao_sql = ordenacoes_permitidas.get(
+        ordenacao,
+        ordenacoes_permitidas["nome_asc"],
+    )
+    
     consulta = text(
-        """
+        f"""
         SELECT
             ii.id AS instancia_id,
             ii.asset_id,
@@ -87,42 +98,42 @@ def listar_itens_inventario(
             ON ic.id = ii.item_catalogo_id
 
         WHERE ii.usuario_id = :usuario_id
-          AND ii.ativo = 1
+            AND ii.ativo = 1
 
-        AND (
-            :busca IS NULL
-            OR ic.nome_mercado LIKE :busca_like
-            OR ic.nome_exibicao LIKE :busca_like
-            OR ic.nome_arma LIKE :busca_like
-            OR ic.nome_acabamento LIKE :busca_like
-        )
+            AND (
+                :busca IS NULL
+                OR ic.nome_mercado LIKE :busca_like
+                OR ic.nome_exibicao LIKE :busca_like
+                OR ic.nome_arma LIKE :busca_like
+                OR ic.nome_acabamento LIKE :busca_like
+            )
         
-        AND (
-            :tipo_item IS NULL
-            OR ic.tipo_item = :tipo_item
-        )
+            AND (
+                :tipo_item IS NULL
+                OR ic.tipo_item = :tipo_item
+            )
         
-        AND (
-            :raridade IS NULL
-            OR ic.raridade = :raridade
-        )
+            AND (
+                :raridade IS NULL
+                OR ic.raridade = :raridade
+            )
         
-        AND (
-            :estado_exterior IS NULL
-            OR ic.estado_exterior = :estado_exterior
-        )
+            AND (
+                :estado_exterior IS NULL
+                OR ic.estado_exterior = :estado_exterior
+            )
         
-        AND (
-            :stattrak IS NULL
-            OR ii.stattrak = :stattrak
-        )
+            AND (
+                :stattrak IS NULL
+                OR ii.stattrak = :stattrak
+            )
 
-        AND (
-            :souvenir IS NULL
-            OR ii.souvenir = :souvenir
-        )
+            AND (
+                :souvenir IS NULL
+                OR ii.souvenir = :souvenir
+            )
         
-        ORDER BY ic.nome_mercado ASC
+        ORDER BY {ordenacao_sql}
 
         LIMIT :limite
         OFFSET :deslocamento
