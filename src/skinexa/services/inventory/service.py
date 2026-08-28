@@ -197,6 +197,7 @@ class InventarioService:
         estado_exterior: str | None = None,
         stattrak: bool | None = None,
         souvenir: bool | None = None,
+        ordenacao: str = "nome_asc",
     ) -> tuple[list[ItemInventarioDTO], int]:
         """Retorna os itens do inventário e sua quantidade total."""
 
@@ -242,6 +243,20 @@ class InventarioService:
         if not estado_exterior_normalizado:
             estado_exterior_normalizado = None
         
+        ordenacoes_permitidas = {
+            "nome_asc",
+            "nome_desc",
+        }
+
+        ordenacao_normalizada = (
+            ordenacao.strip()
+            if ordenacao
+            else "nome_asc"
+        )
+
+        if ordenacao_normalizada not in ordenacoes_permitidas:
+            ordenacao_normalizada = "nome_asc"
+        
         deslocamento = (
             pagina - 1
         ) * itens_por_pagina
@@ -256,6 +271,7 @@ class InventarioService:
             estado_exterior=estado_exterior_normalizado,
             stattrak=stattrak,
             souvenir=souvenir,
+            ordenacao=ordenacao_normalizada
         )
 
         itens = [
