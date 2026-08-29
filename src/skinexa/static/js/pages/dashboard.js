@@ -7,9 +7,10 @@ const inventoryState = {
     busca: "",
     tipo: "",
     raridade: "",
-    estador: "",
+    estado: "",
     stattrak: false,
     souvenir: false,
+    ordenacao: "nome_asc",
 };
 
 document.addEventListener(
@@ -22,6 +23,7 @@ document.addEventListener(
         configurarFiltroEstadoInventario();
         configurarFiltroStatTrakInventario();
         configurarFiltroSouvenirInventario();
+        configurarOrdenacaoInventario();
         configurarSincronizacaoInventario();
         
         carregarTiposInventario();
@@ -193,6 +195,26 @@ function configurarFiltroSouvenirInventario() {
             inventoryState.souvenir =
                 checkbox.checked;
 
+            inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
+function configurarOrdenacaoInventario() {
+    const select = document.querySelector(
+        "#inventory-order-filter"
+    );
+
+    if (!select) {
+        return;
+    }
+
+    select.addEventListener(
+        "change",
+        async () => {
+            inventoryState.ordenacao = select.value;
             inventoryState.pagina = 1;
 
             await carregarInventario();
@@ -423,6 +445,13 @@ async function carregarInventario() {
             parametros.set(
                 "souvenir",
                 "1"
+            );
+        }
+
+        if (inventoryState.ordenacao) {
+            parametros.set(
+                "ordenacao",
+                inventoryState.ordenacao
             );
         }
 
