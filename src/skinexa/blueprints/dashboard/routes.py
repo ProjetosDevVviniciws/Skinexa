@@ -19,6 +19,10 @@ from skinexa.utils.conversores import (
     converter_booleano_query,
 )
 
+from skinexa.utils.normalizadores import (
+    normalizar_ordenacao_inventario,
+)
+
 dashboard_bp = Blueprint(
     "dashboard",
     __name__,
@@ -77,6 +81,10 @@ def obter_inventario():
         request.args.get("souvenir")
     )
     
+    ordenacao = normalizar_ordenacao_inventario (
+        request.args.get("ordenacao")
+    )
+        
     itens_por_pagina = 20
 
     itens, total_itens = (
@@ -90,6 +98,7 @@ def obter_inventario():
             estado_exterior=estado_exterior,
             stattrak=stattrak,
             souvenir=souvenir,
+            ordenacao=ordenacao,
         )
     )
 
@@ -129,6 +138,7 @@ def obter_inventario():
             "estado": estado_exterior or "",
             "stattrak": stattrak,
             "souvenir": souvenir,
+            "ordenacao": ordenacao,
             "tem_anterior": pagina > 1,
             "tem_proxima": (
                 pagina * itens_por_pagina
