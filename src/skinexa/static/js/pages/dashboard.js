@@ -24,6 +24,7 @@ document.addEventListener(
         configurarFiltroStatTrakInventario();
         configurarFiltroSouvenirInventario();
         configurarOrdenacaoInventario();
+        configurarLimpezaFiltrosInventario();
         configurarSincronizacaoInventario();
         
         carregarTiposInventario();
@@ -216,6 +217,25 @@ function configurarOrdenacaoInventario() {
         async () => {
             inventoryState.ordenacao = select.value;
             inventoryState.pagina = 1;
+
+            await carregarInventario();
+        }
+    );
+}
+
+function configurarLimpezaFiltrosInventario() {
+    const botao = document.querySelector(
+        "#inventory-clear-filters"
+    );
+
+    if (!botao) {
+        return;
+    }
+
+    botao.addEventListener(
+        "click",
+        async () => {
+            limparFiltrosInventario();
 
             await carregarInventario();
         }
@@ -487,6 +507,73 @@ async function carregarInventario() {
             container,
             total
         );
+    }
+}
+
+function limparFiltrosInventario() {
+    inventoryState.pagina = 1;
+    inventoryState.busca = "";
+    inventoryState.tipo = "";
+    inventoryState.raridade = "";
+    inventoryState.estado = "";
+    inventoryState.stattrak = false;
+    inventoryState.souvenir = false;
+    inventoryState.ordenacao = "nome_asc";
+
+    const campoBusca = document.querySelector(
+        "#inventory-search-input"
+    );
+
+    const filtroTipo = document.querySelector(
+        "#inventory-type-select"
+    );
+
+    const filtroRaridade = document.querySelector(
+        "#inventory-rarity-select"
+    );
+
+    const filtroEstado = document.querySelector(
+        "#inventory-exterior-select"
+    );
+
+    const filtroStatTrak = document.querySelector(
+        "#inventory-stattrak-filter"
+    );
+
+    const filtroSouvenir = document.querySelector(
+        "#inventory-souvenir-filter"
+    );
+
+    const filtroOrdenacao = document.querySelector(
+        "#inventory-order-filter"
+    );
+
+    if (campoBusca) {
+        campoBusca.value = "";
+    }
+
+    if (filtroTipo) {
+        filtroTipo.value = "";
+    }
+
+    if (filtroRaridade) {
+        filtroRaridade.value = "";
+    }
+
+    if (filtroEstado) {
+        filtroEstado.value = "";
+    }
+
+    if (filtroStatTrak) {
+        filtroStatTrak.checked = false;
+    }
+
+    if (filtroSouvenir) {
+        filtroSouvenir.checked = false;
+    }
+
+    if (filtroOrdenacao) {
+        filtroOrdenacao.value = "nome_asc";
     }
 }
 
