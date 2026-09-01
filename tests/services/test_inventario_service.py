@@ -642,6 +642,7 @@ def test_listar_inventario_com_busca(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -691,6 +692,7 @@ def test_listar_inventario_normaliza_busca(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -739,6 +741,7 @@ def test_listar_inventario_trata_busca_vazia(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -790,6 +793,7 @@ def test_listar_inventario_com_tipo(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -842,6 +846,7 @@ def test_listar_inventario_com_busca_e_tipo(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -886,6 +891,7 @@ def test_listar_inventario_trata_tipo_vazio(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -937,6 +943,7 @@ def test_listar_inventario_com_raridade(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -987,7 +994,8 @@ def test_listar_inventario_com_busca_tipo_e_raridade(
         raridade="Oculto",
         estado_exterior=None,
         stattrak=None,
-        souvenir=None,        
+        souvenir=None,
+        ordenacao="nome_asc",        
     )
 
     mock_contar.assert_called_once_with(
@@ -1031,6 +1039,7 @@ def test_listar_inventario_trata_raridade_vazia(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1085,6 +1094,7 @@ def test_listar_inventario_com_estado_exterior(
         estado_exterior="Testada em Campo",
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1137,6 +1147,7 @@ def test_listar_inventario_com_todos_os_filtros(
         estado_exterior="Testada em Campo",
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1181,6 +1192,7 @@ def test_listar_inventario_trata_estado_exterior_vazio(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1229,6 +1241,7 @@ def test_listar_inventario_com_stattrak(
         estado_exterior=None,
         stattrak=True,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1277,6 +1290,7 @@ def test_listar_inventario_com_souvenir(
         estado_exterior=None,
         stattrak=None,
         souvenir=True,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1320,6 +1334,7 @@ def test_listar_inventario_preserva_stattrak_false(
         estado_exterior=None,
         stattrak=False,
         souvenir=None,
+        ordenacao="nome_asc",
     )
 
     mock_contar.assert_called_once_with(
@@ -1330,4 +1345,79 @@ def test_listar_inventario_preserva_stattrak_false(
         estado_exterior=None,
         stattrak=False,
         souvenir=None,
+    )
+
+@patch(
+    "skinexa.services.inventory.service.contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service.listar_itens_inventario",
+    return_value=[],
+)
+
+def test_listar_inventario_com_ordenacao_nome_asc(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem do inventário preserva corretamente o filtro ordenação como nome_asc."""
+
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        ordenacao="nome_asc",
+    )
+
+    assert (
+        mock_listar.call_args.kwargs["ordenacao"]
+        == "nome_asc"
+    )
+
+@patch(
+    "skinexa.services.inventory.service.contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service.listar_itens_inventario",
+    return_value=[],
+)
+   
+def test_listar_inventario_com_ordenacao_nome_desc(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem do inventário preserva corretamente o filtro ordenação como nome_desc."""
+
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        ordenacao="nome_desc",
+    )
+
+    assert (
+        mock_listar.call_args.kwargs["ordenacao"]
+        == "nome_desc"
+    )
+
+@patch(
+    "skinexa.services.inventory.service.contar_itens_inventario",
+    return_value=0,
+)
+@patch(
+    "skinexa.services.inventory.service.listar_itens_inventario",
+    return_value=[],
+)
+
+def test_listar_inventario_com_ordenacao_invalida(
+    mock_listar,
+    mock_contar,
+):
+    """Testa se a listagem normaliza uma ordenação inválida para nome_asc."""
+
+    InventarioService.listar_inventario(
+        usuario_id=1,
+        ordenacao="invalida",
+    )
+
+    assert (
+        mock_listar.call_args.kwargs["ordenacao"]
+        == "nome_asc"
     )
