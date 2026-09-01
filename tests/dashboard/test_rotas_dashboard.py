@@ -326,6 +326,7 @@ def test_obter_inventario_retorna_json(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -376,6 +377,7 @@ def test_obter_segunda_pagina_inventario(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 def test_inventario_bloqueia_usuario_anonimo(
@@ -527,6 +529,7 @@ def test_obter_inventario_com_busca(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -585,6 +588,7 @@ def test_obter_inventario_busca_sem_resultados(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -639,6 +643,7 @@ def test_obter_inventario_paginado_com_busca(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -690,6 +695,7 @@ def test_obter_inventario_com_tipo(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -744,6 +750,7 @@ def test_obter_inventario_com_busca_e_tipo(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -843,6 +850,7 @@ def test_obter_inventario_com_raridade(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -898,6 +906,7 @@ def test_obter_inventario_com_busca_tipo_e_raridade(
         estado_exterior=None,
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -997,6 +1006,7 @@ def test_obter_inventario_com_estado(
         estado_exterior="Testada em Campo",
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -1055,6 +1065,7 @@ def test_obter_inventario_com_todos_os_filtros(
         estado_exterior="Testada em Campo",
         stattrak=None,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -1156,6 +1167,7 @@ def test_obter_inventario_com_stattrak(
         estado_exterior=None,
         stattrak=True,
         souvenir=None,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -1243,4 +1255,155 @@ def test_obter_inventario_com_stattrak_false(
         estado_exterior=None,
         stattrak=False,
         souvenir=None,
+        ordenacao="nome_asc",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_ordenacao_nome_asc(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario preserva corretamente a ordenação por nome crescente."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        35,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&ordenacao=nome_asc"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["ordenacao"] == "nome_asc"
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
+        ordenacao="nome_asc",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_ordenacao_nome_desc(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario preserva corretamente a ordenação por nome decrescente."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        35,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&ordenacao=nome_desc"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["ordenacao"] == "nome_desc"
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
+        ordenacao="nome_desc",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_com_ordenacao_invalida(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    client,
+):
+    """Testa se a rota /dashboard/inventario normaliza uma ordenação inválida para nome_asc."""
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        35,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario"
+        "?pagina=1&ordenacao=invalida"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["ordenacao"] == "nome_asc"
+
+    mock_listar_inventario.assert_called_once_with(
+        usuario_id=1,
+        pagina=1,
+        itens_por_pagina=20,
+        busca=None,
+        tipo_item=None,
+        raridade=None,
+        estado_exterior=None,
+        stattrak=None,
+        souvenir=None,
+        ordenacao="nome_asc",
     )
