@@ -1,7 +1,7 @@
 """Centraliza a comunicação HTTP com a API da Skinport."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -62,6 +62,7 @@ def buscar_precos_skinport(
             timeout=timeout,
             headers={
                 "Accept": "application/json",
+                "Accept-Encoding": "br",
                 "User-Agent": "Skinexa/1.0",
             },
         )
@@ -223,19 +224,30 @@ def _converter_datetime(
     if valor is None:
         return None
 
-    if not isinstance(valor, str):
+    if isinstance(valor, bool):
         raise RespostaSkinportInvalida(
             "A Skinport retornou uma data inválida."
         )
 
     try:
-        return datetime.fromisoformat(
-            valor.replace(
-                "Z",
-                "+00:00",
-            )
+        timestamp = int(valor)
+
+        if timestamp < 0:
+            raise ValueError
+
+        return datetime.fromtimestamp(
+            timestamp,
+            tz=timezone.utc,
+        ).replace(
+            tzinfo=None,
         )
-    except ValueError as erro:
+
+    except (
+        TypeError,
+        ValueError,
+        OverflowError,
+        OSError,
+    ) as erro:
         raise RespostaSkinportInvalida(
             "A Skinport retornou uma data inválida."
         ) from erro
