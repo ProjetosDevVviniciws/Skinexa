@@ -8,6 +8,7 @@ from skinexa.database.queries.historico_precos import (
     inserir_historico_preco,
     obter_item_catalogo_id_por_nome_mercado,
     obter_plataforma_mercado_id_por_identificador,
+    obter_itens_catalogo_ids_por_nomes_mercado,
 )
 
 def test_obter_item_catalogo_id_por_nome_mercado():
@@ -209,3 +210,58 @@ def test_inserir_historico_preco_envia_parametros_corretos():
         "volume_vendas": None,
         "atualizado_na_origem_em": atualizado_em,
     }
+    
+def test_obter_itens_catalogo_ids_por_nomes_mercado():
+    """Testa busca em lote dos itens do catálogo."""
+
+    conexao = Mock()
+
+    registro_1 = Mock()
+    registro_1.id = 15
+    registro_1.nome_mercado = (
+        "AK-47 | Redline (Field-Tested)"
+    )
+
+    registro_2 = Mock()
+    registro_2.id = 20
+    registro_2.nome_mercado = (
+        "AWP | Asiimov (Field-Tested)"
+    )
+
+    conexao.execute.return_value = [
+        registro_1,
+        registro_2,
+    ]
+
+    resultado = (
+        obter_itens_catalogo_ids_por_nomes_mercado(
+            conexao,
+            {
+                "AK-47 | Redline (Field-Tested)",
+                "AWP | Asiimov (Field-Tested)",
+            },
+        )
+    )
+
+    assert resultado == {
+        "AK-47 | Redline (Field-Tested)": 15,
+        "AWP | Asiimov (Field-Tested)": 20,
+    }
+
+    conexao.execute.assert_called_once()
+    
+def test_obter_itens_catalogo_ids_com_conjunto_vazio():
+    """Não consulta o banco quando não existem nomes."""
+
+    conexao = Mock()
+
+    resultado = (
+        obter_itens_catalogo_ids_por_nomes_mercado(
+            conexao,
+            set(),
+        )
+    )
+
+    assert resultado == {}
+
+    conexao.execute.assert_not_called()
