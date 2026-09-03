@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import text
+from sqlalchemy import text, bindparam
 from sqlalchemy.engine import Connection
 
 def obter_item_catalogo_id_por_nome_mercado(
@@ -33,6 +33,47 @@ def obter_item_catalogo_id_por_nome_mercado(
         return None
 
     return int(resultado)
+
+def obter_itens_catalogo_ids_por_nomes_mercado(
+    conexao: Connection,
+    nomes_mercado: set[str],
+) -> dict[str, int]:
+    """
+    Obtém IDs dos itens do catálogo
+    pelos respectivos nomes de mercado.
+    """
+
+    if not nomes_mercado:
+        return {}
+
+    consulta = text(
+        """
+        SELECT
+            id,
+            nome_mercado
+        FROM itens_catalogo
+        WHERE nome_mercado IN :nomes_mercado
+        """
+    ).bindparams(
+        bindparam(
+            "nomes_mercado",
+            expanding=True,
+        )
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "nomes_mercado": tuple(
+                nomes_mercado
+            ),
+        },
+    )
+
+    return {
+        str(registro.nome_mercado): int(registro.id)
+        for registro in resultado
+    }
 
 def obter_plataforma_mercado_id_por_identificador(
     conexao: Connection,
