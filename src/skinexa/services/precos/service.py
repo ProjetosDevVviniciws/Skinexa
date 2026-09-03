@@ -7,6 +7,7 @@ from skinexa.database.queries.historico_precos import (
     inserir_historico_preco,
     obter_item_catalogo_id_por_nome_mercado,
     obter_plataforma_mercado_id_por_identificador,
+    obter_itens_catalogo_ids_por_nomes_mercado,
 )
 
 from skinexa.domain.preco import PrecoMercado
@@ -36,14 +37,37 @@ def registrar_precos(
     são ignorados.
     """
 
-    total_recebido = 0
+    precos_recebidos = tuple(precos)
+
+    total_recebido = len(
+        precos_recebidos
+    )
+
+    if not precos_recebidos:
+        return ResultadoRegistroPrecos(
+            total_recebido=0,
+            total_registrado=0,
+            total_ignorado=0,
+        ) 
+
+    nomes_mercado = {
+        preco.nome_mercado
+        for preco in precos_recebidos
+    }
+
+    itens_catalogo = (
+        obter_itens_catalogo_ids_por_nomes_mercado(
+            conexao,
+            nomes_mercado,
+        )
+    )
+
     total_registrado = 0
     total_ignorado = 0
 
     plataformas: dict[str, int] = {}
 
     for preco in precos:
-        total_recebido += 1
 
         plataforma_id = plataformas.get(
             preco.plataforma
@@ -67,11 +91,8 @@ def registrar_precos(
                 plataforma_id
             )
 
-        item_catalogo_id = (
-            obter_item_catalogo_id_por_nome_mercado(
-                conexao,
-                preco.nome_mercado,
-            )
+        item_catalogo_id = itens_catalogo.get(
+            preco.nome_mercado
         )
 
         if item_catalogo_id is None:
