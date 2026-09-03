@@ -43,7 +43,7 @@ def _criar_preco(
 )
 @patch(
     "skinexa.services.precos.service."
-    "obter_item_catalogo_id_por_nome_mercado",
+    "obter_itens_catalogo_ids_por_nomes_mercado",
 )
 @patch(
     "skinexa.services.precos.service."
@@ -52,7 +52,7 @@ def _criar_preco(
 
 def test_registrar_preco_com_sucesso(
     mock_obter_plataforma,
-    mock_obter_item,
+    mock_obter_itens,
     mock_inserir_historico,
 ):
     """Testa o registro de um preço normalizado."""
@@ -60,7 +60,9 @@ def test_registrar_preco_com_sucesso(
     conexao = Mock()
 
     mock_obter_plataforma.return_value = 2
-    mock_obter_item.return_value = 15
+    mock_obter_itens.return_value = {
+        "AK-47 | Redline (Field-Tested)": 15,
+    }
     mock_inserir_historico.return_value = 37
 
     preco = _criar_preco()
@@ -79,9 +81,11 @@ def test_registrar_preco_com_sucesso(
         "skinport",
     )
 
-    mock_obter_item.assert_called_once_with(
+    mock_obter_itens.assert_called_once_with(
         conexao,
-        "AK-47 | Redline (Field-Tested)",
+        {
+            "AK-47 | Redline (Field-Tested)",
+        },
     )
 
     mock_inserir_historico.assert_called_once_with(
@@ -111,7 +115,7 @@ def test_registrar_preco_com_sucesso(
 )
 @patch(
     "skinexa.services.precos.service."
-    "obter_item_catalogo_id_por_nome_mercado",
+    "obter_itens_catalogo_ids_por_nomes_mercado",
 )
 @patch(
     "skinexa.services.precos.service."
@@ -120,7 +124,7 @@ def test_registrar_preco_com_sucesso(
 
 def test_registrar_preco_ignora_item_inexistente(
     mock_obter_plataforma,
-    mock_obter_item,
+    mock_obter_itens,
     mock_inserir_historico,
 ):
     """Testa o descarte de item ausente no catálogo."""
@@ -128,7 +132,7 @@ def test_registrar_preco_ignora_item_inexistente(
     conexao = Mock()
 
     mock_obter_plataforma.return_value = 2
-    mock_obter_item.return_value = None
+    mock_obter_itens.return_value = {}
 
     resultado = registrar_precos(
         conexao,
@@ -147,7 +151,7 @@ def test_registrar_preco_ignora_item_inexistente(
 )
 @patch(
     "skinexa.services.precos.service."
-    "obter_item_catalogo_id_por_nome_mercado",
+    "obter_itens_catalogo_ids_por_nomes_mercado",
 )
 @patch(
     "skinexa.services.precos.service."
@@ -156,7 +160,7 @@ def test_registrar_preco_ignora_item_inexistente(
 
 def test_registrar_preco_rejeita_plataforma_indisponivel(
     mock_obter_plataforma,
-    mock_obter_item,
+    mock_obter_itens,
     mock_inserir_historico,
 ):
     """Testa erro quando a plataforma não está disponível."""
@@ -174,7 +178,9 @@ def test_registrar_preco_rejeita_plataforma_indisponivel(
             [_criar_preco()],
         )
 
-    mock_obter_item.assert_not_called()
+    mock_obter_itens.return_value = {
+        "AK-47 | Redline (Field-Tested)": 15,
+    }
     mock_inserir_historico.assert_not_called()
 
 @patch(
@@ -183,7 +189,7 @@ def test_registrar_preco_rejeita_plataforma_indisponivel(
 )
 @patch(
     "skinexa.services.precos.service."
-    "obter_item_catalogo_id_por_nome_mercado",
+    "obter_itens_catalogo_ids_por_nomes_mercado",
 )
 @patch(
     "skinexa.services.precos.service."
@@ -192,7 +198,7 @@ def test_registrar_preco_rejeita_plataforma_indisponivel(
 
 def test_registrar_multiplos_precos(
     mock_obter_plataforma,
-    mock_obter_item,
+    mock_obter_itens,
     mock_inserir_historico,
 ):
     """Testa o registro de múltiplos preços."""
@@ -201,10 +207,10 @@ def test_registrar_multiplos_precos(
 
     mock_obter_plataforma.return_value = 2
 
-    mock_obter_item.side_effect = [
-        15,
-        20,
-    ]
+    mock_obter_itens.return_value = {
+        "AK-47 | Redline (Field-Tested)": 15,
+        "AWP | Asiimov (Field-Tested)": 20,
+    }
 
     precos = [
         _criar_preco(
@@ -236,7 +242,7 @@ def test_registrar_multiplos_precos(
 )
 @patch(
     "skinexa.services.precos.service."
-    "obter_item_catalogo_id_por_nome_mercado",
+    "obter_itens_catalogo_ids_por_nomes_mercado",
 )
 @patch(
     "skinexa.services.precos.service."
@@ -245,7 +251,7 @@ def test_registrar_multiplos_precos(
 
 def test_registrar_precos_resolve_plataforma_uma_vez(
     mock_obter_plataforma,
-    mock_obter_item,
+    mock_obter_itens,
     mock_inserir_historico,
 ):
     """Testa o cache interno do ID da plataforma."""
@@ -254,11 +260,11 @@ def test_registrar_precos_resolve_plataforma_uma_vez(
 
     mock_obter_plataforma.return_value = 2
 
-    mock_obter_item.side_effect = [
-        15,
-        20,
-        30,
-    ]
+    mock_obter_itens.return_value = {
+        "Item 1": 15,
+        "Item 2": 20,
+        "Item 3": 30,
+    }
 
     precos = [
         _criar_preco(
@@ -282,5 +288,47 @@ def test_registrar_precos_resolve_plataforma_uma_vez(
         "skinport",
     )
 
-    assert mock_obter_item.call_count == 3
+    mock_obter_itens.assert_called_once_with(
+        conexao,
+        {
+            "Item 1",
+            "Item 2",
+            "Item 3",
+        },
+    )
     assert mock_inserir_historico.call_count == 3
+    
+@patch(
+    "skinexa.services.precos.service."
+    "inserir_historico_preco",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_itens_catalogo_ids_por_nomes_mercado",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_plataforma_mercado_id_por_identificador",
+)
+
+def test_registrar_precos_lista_vazia(
+    mock_obter_plataforma,
+    mock_obter_itens,
+    mock_inserir_historico,
+):
+    """Testa registro sem preços recebidos."""
+
+    conexao = Mock()
+
+    resultado = registrar_precos(
+        conexao,
+        [],
+    )
+
+    assert resultado.total_recebido == 0
+    assert resultado.total_registrado == 0
+    assert resultado.total_ignorado == 0
+
+    mock_obter_itens.assert_not_called()
+    mock_obter_plataforma.assert_not_called()
+    mock_inserir_historico.assert_not_called()
