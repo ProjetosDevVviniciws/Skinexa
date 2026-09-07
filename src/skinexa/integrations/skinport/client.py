@@ -22,6 +22,9 @@ class SkinportIndisponivel(ErroSkinport):
 class LimiteSkinportExcedido(ErroSkinport):
     """A Skinport limitou temporariamente as requisições."""
 
+class SkinportBloqueadaPorProtecao(ErroSkinport):
+    """A proteção anti-bot da Skinport bloqueou a requisição."""
+
 class RespostaSkinportInvalida(ErroSkinport):
     """A Skinport retornou uma resposta inválida."""
 
@@ -80,6 +83,15 @@ def buscar_precos_skinport(
             "A Skinport limitou temporariamente as consultas."
         )
 
+    if (
+        resposta.status_code == 403
+        and resposta.headers.get("Cf-Mitigated") == "challenge"
+    ):
+        raise SkinportBloqueadaPorProtecao(
+            "A proteção da Skinport bloqueou "
+            "temporariamente a requisição."
+        )
+    
     if resposta.status_code >= 500:
         raise SkinportIndisponivel(
             "A API da Skinport está indisponível."
