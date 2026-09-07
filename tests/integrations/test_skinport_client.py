@@ -9,6 +9,7 @@ from skinexa.integrations.skinport.client import (
     ErroSkinport,
     LimiteSkinportExcedido,
     RespostaSkinportInvalida,
+    SkinportBloqueadaPorProtecao,
     SkinportIndisponivel,
     buscar_precos_skinport,
 )
@@ -340,6 +341,7 @@ def test_rejeitar_quantidade_invalida_skinport(
     "skinexa.integrations.skinport.client."
     "requests.get",
 )
+
 def test_rejeitar_data_invalida_skinport(
     mock_get,
     app,
@@ -373,3 +375,35 @@ def test_rejeitar_data_invalida_skinport(
             match="data inválida",
         ):
             buscar_precos_skinport()
+            
+@patch(
+    "skinexa.integrations.skinport.client."
+    "requests.get",
+)
+
+def test_rejeitar_bloqueio_cloudflare_skinport(
+    mock_get,
+    app,
+):
+    """Testa bloqueio da requisição pelo Cloudflare."""
+
+    resposta = Mock()
+
+    resposta.status_code = 403
+
+    resposta.headers = {
+        "Cf-Mitigated": "challenge",
+        "Server": "cloudflare",
+    }
+
+    mock_get.return_value = resposta
+
+    with app.app_context():
+        with pytest.raises(
+            SkinportBloqueadaPorProtecao,
+            match="proteção da Skinport",
+        ):
+            buscar_precos_skinport()
+
+    resposta.raise_for_status.assert_not_called()
+    resposta.json.assert_not_called()
