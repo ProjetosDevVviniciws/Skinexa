@@ -8,9 +8,10 @@ from skinexa.database.queries.historico_precos import (
     obter_item_catalogo_id_por_nome_mercado,
     obter_plataforma_mercado_id_por_identificador,
     obter_itens_catalogo_ids_por_nomes_mercado,
+    obter_ultimos_precos_itens_plataforma,
 )
 
-from skinexa.domain.preco import PrecoMercado
+from skinexa.domain.preco import PrecoMercado, UltimoPrecoMercado
 
 class ErroPrecoService(RuntimeError):
     """Erro durante o processamento de preços."""
@@ -123,3 +124,64 @@ def registrar_precos(
         total_registrado=total_registrado,
         total_ignorado=total_ignorado,
     )
+    
+def obter_ultimos_precos(
+    conexao: Connection,
+    *,
+    item_catalogo_ids: set[int],
+    plataforma: str,
+) -> dict[int, UltimoPrecoMercado]:
+    """
+    Obtém o último preço conhecido de cada item
+    para uma determinada plataforma.
+    """
+
+    if not item_catalogo_ids:
+        return {}
+
+    plataforma_id = (
+        obter_plataforma_mercado_id_por_identificador(
+            conexao,
+            plataforma,
+        )
+    )
+
+    if plataforma_id is None:
+        raise PlataformaMercadoIndisponivel(
+            "A plataforma de mercado "
+            f"'{plataforma}' "
+            "não está disponível."
+        )
+
+    registros = (
+        obter_ultimos_precos_itens_plataforma(
+            conexao,
+            item_catalogo_ids=item_catalogo_ids,
+            plataforma_mercado_id=plataforma_id,
+        )
+    )
+
+    return {
+        item_catalogo_id: UltimoPrecoMercado(
+            item_catalogo_id=item_catalogo_id,
+            plataforma=plataforma,
+            moeda=str(registro["moeda"]),
+            menor_preco=registro["menor_preco"],
+            maior_preco=registro["maior_preco"],
+            preco_medio=registro["preco_medio"],
+            preco_mediano=registro["preco_mediano"],
+            maior_ordem_compra=(
+                registro["maior_ordem_compra"]
+            ),
+            quantidade_anuncios=(
+                registro["quantidade_anuncios"]
+            ),
+            volume_vendas=registro["volume_vendas"],
+            coletado_em=registro["coletado_em"],
+            atualizado_na_origem_em=(
+                registro["atualizado_na_origem_em"]
+            ),
+        )
+        for item_catalogo_id, registro
+        in registros.items()
+    }
