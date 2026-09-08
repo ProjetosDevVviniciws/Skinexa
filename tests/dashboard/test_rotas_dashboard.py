@@ -1,9 +1,14 @@
 from datetime import datetime, UTC
+
 from unittest.mock import patch
+
+from decimal import Decimal
+
+import pytest
 
 from skinexa.blueprints.auth.usuario_sessao import UsuarioSessao
 
-from unittest.mock import patch
+from skinexa.domain.preco import UltimoPrecoMercado
 
 from skinexa.services.inventory.service import (
     ResultadoSincronizacaoInventario,
@@ -14,16 +19,25 @@ from skinexa.integrations.steam.inventario import (
     LimiteSteamExcedido,
 )
 
-from unittest.mock import patch
-
-from datetime import UTC, datetime
-from decimal import Decimal
-
 from skinexa.dto.steam.inventario import ItemInventarioDTO
 
 from skinexa.exceptions.inventario import (
     CooldownSincronizacaoAtivo,
 )
+
+@pytest.fixture(autouse=True)
+def mock_consultar_precos_dashboard():
+    """
+    Impede consultas reais de preços durante
+    os testes das rotas do dashboard.
+    """
+
+    with patch(
+        "skinexa.blueprints.dashboard.routes."
+        "consultar_ultimos_precos",
+        return_value={},
+    ) as mock_consultar:
+        yield mock_consultar
 
 def test_dashboard_bloqueia_usuario_anonimo(client):
     """Testa se a rota /dashboard bloqueia usuários anônimos."""
@@ -315,6 +329,7 @@ def test_obter_inventario_retorna_json(
     assert item["raridade"] == "Classified"
     assert item["trocavel"] is True
     assert item["comercializavel"] is True
+    assert item["preco"] is None
 
     mock_listar_inventario.assert_called_once_with(
         usuario_id=1,
