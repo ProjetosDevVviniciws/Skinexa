@@ -4,9 +4,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from skinexa.domain.preco import PrecoMercado
+from skinexa.domain.preco import PrecoMercado, UltimoPrecoMercado
 from skinexa.services.precos.service import (
     PlataformaMercadoIndisponivel,
+    obter_ultimos_precos,
     registrar_precos,
 )
 
@@ -332,3 +333,203 @@ def test_registrar_precos_lista_vazia(
     mock_obter_itens.assert_not_called()
     mock_obter_plataforma.assert_not_called()
     mock_inserir_historico.assert_not_called()
+    
+@patch(
+    "skinexa.services.precos.service."
+    "obter_ultimos_precos_itens_plataforma",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_plataforma_mercado_id_por_identificador",
+)
+
+def test_obter_ultimos_precos_com_sucesso(
+    mock_obter_plataforma,
+    mock_obter_precos,
+):
+    """Testa obtenção dos últimos preços dos itens."""
+
+    conexao = Mock()
+
+    coletado_em = datetime(
+        2026,
+        9,
+        7,
+        20,
+        57,
+        40,
+    )
+
+    atualizado_em = datetime(
+        2026,
+        9,
+        7,
+        20,
+        45,
+        13,
+    )
+
+    mock_obter_plataforma.return_value = 2
+
+    mock_obter_precos.return_value = {
+        1: {
+            "moeda": "BRL",
+            "menor_preco": Decimal("75.18"),
+            "maior_preco": Decimal("7364.27"),
+            "preco_medio": Decimal("424.00"),
+            "preco_mediano": Decimal("143.05"),
+            "maior_ordem_compra": None,
+            "quantidade_anuncios": 134,
+            "volume_vendas": None,
+            "coletado_em": coletado_em,
+            "atualizado_na_origem_em": atualizado_em,
+        }
+    }
+
+    resultado = obter_ultimos_precos(
+        conexao,
+        item_catalogo_ids={1},
+        plataforma="skinport",
+    )
+
+    assert resultado == {
+        1: UltimoPrecoMercado(
+            item_catalogo_id=1,
+            plataforma="skinport",
+            moeda="BRL",
+            menor_preco=Decimal("75.18"),
+            maior_preco=Decimal("7364.27"),
+            preco_medio=Decimal("424.00"),
+            preco_mediano=Decimal("143.05"),
+            maior_ordem_compra=None,
+            quantidade_anuncios=134,
+            volume_vendas=None,
+            coletado_em=coletado_em,
+            atualizado_na_origem_em=atualizado_em,
+        )
+    }
+
+    mock_obter_plataforma.assert_called_once_with(
+        conexao,
+        "skinport",
+    )
+
+    mock_obter_precos.assert_called_once_with(
+        conexao,
+        item_catalogo_ids={1},
+        plataforma_mercado_id=2,
+    )
+    
+@patch(
+    "skinexa.services.precos.service."
+    "obter_ultimos_precos_itens_plataforma",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_plataforma_mercado_id_por_identificador",
+)
+
+def test_obter_ultimos_precos_rejeita_plataforma_indisponivel(
+    mock_obter_plataforma,
+    mock_obter_precos,
+):
+    """Testa rejeição de plataforma indisponível."""
+
+    conexao = Mock()
+
+    mock_obter_plataforma.return_value = None
+
+    with pytest.raises(
+        PlataformaMercadoIndisponivel,
+        match="não está disponível",
+    ):
+        obter_ultimos_precos(
+            conexao,
+            item_catalogo_ids={1},
+            plataforma="skinport",
+        )
+
+    mock_obter_precos.assert_not_called()
+    
+@patch(
+    "skinexa.services.precos.service."
+    "obter_ultimos_precos_itens_plataforma",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_plataforma_mercado_id_por_identificador",
+)
+
+def test_obter_ultimos_precos_sem_itens(
+    mock_obter_plataforma,
+    mock_obter_precos,
+):
+    """Testa obtenção de preços sem itens."""
+
+    conexao = Mock()
+
+    resultado = obter_ultimos_precos(
+        conexao,
+        item_catalogo_ids=set(),
+        plataforma="skinport",
+    )
+
+    assert resultado == {}
+
+    mock_obter_plataforma.assert_not_called()
+    mock_obter_precos.assert_not_called()
+    
+@patch(
+    "skinexa.services.precos.service."
+    "obter_ultimos_precos_itens_plataforma",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_plataforma_mercado_id_por_identificador",
+)
+
+def test_obter_ultimos_precos_ignora_itens_sem_historico(
+    mock_obter_plataforma,
+    mock_obter_precos,
+):
+    """Testa itens que ainda não possuem histórico de preço."""
+
+    conexao = Mock()
+
+    coletado_em = datetime(
+        2026,
+        9,
+        7,
+        20,
+        57,
+        40,
+    )
+
+    mock_obter_plataforma.return_value = 2
+
+    mock_obter_precos.return_value = {
+        1: {
+            "moeda": "BRL",
+            "menor_preco": Decimal("75.18"),
+            "maior_preco": Decimal("7364.27"),
+            "preco_medio": Decimal("424.00"),
+            "preco_mediano": Decimal("143.05"),
+            "maior_ordem_compra": None,
+            "quantidade_anuncios": 134,
+            "volume_vendas": None,
+            "coletado_em": coletado_em,
+            "atualizado_na_origem_em": None,
+        }
+    }
+
+    resultado = obter_ultimos_precos(
+        conexao,
+        item_catalogo_ids={1, 2, 3},
+        plataforma="skinport",
+    )
+
+    assert set(resultado) == {1}
+
+    assert resultado[1].menor_preco == Decimal(
+        "75.18"
+    )
