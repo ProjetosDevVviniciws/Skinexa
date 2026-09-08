@@ -21,3 +21,24 @@ class PrecoMercado:
     volume_vendas: int | None
 
     atualizado_na_origem_em: datetime | None
+    
+@dataclass(frozen=True, slots=True)
+class UltimoPrecoMercado:
+    """Representa o último preço conhecido de um item."""
+
+    item_catalogo_id: int
+    plataforma: str
+    moeda: str
+
+    menor_preco: Decimal | None
+    maior_preco: Decimal | None
+    preco_medio: Decimal | None
+    preco_mediano: Decimal | None
+
+    maior_ordem_compra: Decimal | None
+
+    quantidade_anuncios: int | None
+    volume_vendas: int | None
+
+    coletado_em: datetime
+    atualizado_na_origem_em: datetime | None
