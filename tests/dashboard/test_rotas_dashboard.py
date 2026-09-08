@@ -1422,3 +1422,194 @@ def test_obter_inventario_com_ordenacao_invalida(
         souvenir=None,
         ordenacao="nome_asc",
     )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_retorna_preco_skinport(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    mock_consultar_precos_dashboard,
+    client,
+):
+    """Testa se a rota retorna o último preço do item."""
+
+    usuario = criar_usuario_teste()
+
+    mock_carregar_usuario.return_value = usuario
+
+    item = criar_item_inventario_teste()
+
+    mock_listar_inventario.return_value = (
+        [item],
+        1,
+    )
+
+    coletado_em = datetime(
+        2026,
+        9,
+        7,
+        20,
+        57,
+        40,
+    )
+
+    atualizado_em = datetime(
+        2026,
+        9,
+        7,
+        20,
+        45,
+        13,
+    )
+
+    mock_consultar_precos_dashboard.return_value = {
+        10: UltimoPrecoMercado(
+            item_catalogo_id=10,
+            plataforma="skinport",
+            moeda="BRL",
+            menor_preco=Decimal("75.18"),
+            maior_preco=Decimal("7364.27"),
+            preco_medio=Decimal("424.00"),
+            preco_mediano=Decimal("143.05"),
+            maior_ordem_compra=None,
+            quantidade_anuncios=134,
+            volume_vendas=None,
+            coletado_em=coletado_em,
+            atualizado_na_origem_em=atualizado_em,
+        )
+    }
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario?pagina=1"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert len(dados["itens"]) == 1
+
+    preco = dados["itens"][0]["preco"]
+
+    assert preco == {
+        "plataforma": "skinport",
+        "moeda": "BRL",
+        "menor_preco": "75.18",
+        "maior_preco": "7364.27",
+        "preco_medio": "424.00",
+        "preco_mediano": "143.05",
+        "quantidade_anuncios": 134,
+        "coletado_em": "2026-09-07T20:57:40",
+        "atualizado_na_origem_em": (
+            "2026-09-07T20:45:13"
+        ),
+    }
+
+    mock_consultar_precos_dashboard.assert_called_once_with(
+        item_catalogo_ids={10},
+        plataforma="skinport",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_sem_preco_disponivel(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    mock_consultar_precos_dashboard,
+    client,
+):
+    """Testa item que ainda não possui histórico de preço."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [criar_item_inventario_teste()],
+        1,
+    )
+
+    mock_consultar_precos_dashboard.return_value = {}
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario?pagina=1"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert len(dados["itens"]) == 1
+
+    item = dados["itens"][0]
+
+    assert item["item_catalogo_id"] == 10
+    assert item["preco"] is None
+
+    mock_consultar_precos_dashboard.assert_called_once_with(
+        item_catalogo_ids={10},
+        plataforma="skinport",
+    )
+    
+@patch(
+    "skinexa.core.autenticacao."
+    "UsuarioService.obter_usuario_sessao",
+)
+@patch(
+    "skinexa.blueprints.dashboard.routes."
+    "InventarioService.listar_inventario",
+)
+
+def test_obter_inventario_sem_itens_consulta_precos_com_conjunto_vazio(
+    mock_listar_inventario,
+    mock_carregar_usuario,
+    mock_consultar_precos_dashboard,
+    client,
+):
+    """Testa consulta de preços quando o inventário está vazio."""
+
+    mock_carregar_usuario.return_value = (
+        criar_usuario_teste()
+    )
+
+    mock_listar_inventario.return_value = (
+        [],
+        0,
+    )
+
+    autenticar_cliente(client)
+
+    resposta = client.get(
+        "/dashboard/inventario?pagina=1"
+    )
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["itens"] == []
+
+    mock_consultar_precos_dashboard.assert_called_once_with(
+        item_catalogo_ids=set(),
+        plataforma="skinport",
+    )
