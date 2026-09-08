@@ -23,6 +23,10 @@ from skinexa.utils.normalizadores import (
     normalizar_ordenacao_inventario,
 )
 
+from skinexa.services.precos.consulta import (
+    consultar_ultimos_precos,
+)
+
 dashboard_bp = Blueprint(
     "dashboard",
     __name__,
@@ -102,29 +106,100 @@ def obter_inventario():
         )
     )
 
-    dados = [
-        {
-            "instancia_id": item.instancia_id,
-            "item_catalogo_id": item.item_catalogo_id,
-            "nome_mercado": item.nome_mercado,
-            "nome_exibicao": item.nome_exibicao,
-            "tipo_item": item.tipo_item,
-            "raridade": item.raridade,
-            "estado_exterior": item.estado_exterior,
-            "imagem": (
-                item.url_icone_grande
-                or item.url_icone
-            ),
-            "stattrak": item.stattrak,
-            "souvenir": item.souvenir,
-            "trocavel": item.trocavel,
-            "comercializavel": (
-                item.comercializavel
-            ),
-            "quantidade": item.quantidade,
-        }
+    item_catalogo_ids = {
+        item.item_catalogo_id
         for item in itens
-    ]
+    }
+
+    precos = consultar_ultimos_precos(
+        item_catalogo_ids=item_catalogo_ids,
+        plataforma="skinport",
+    )
+    
+    dados = []
+
+    for item in itens:
+        preco = precos.get(
+            item.item_catalogo_id
+        )
+
+        dados.append(
+            {
+                "instancia_id": item.instancia_id,
+                "item_catalogo_id": (
+                    item.item_catalogo_id
+                ),
+                "nome_mercado": item.nome_mercado,
+                "nome_exibicao": item.nome_exibicao,
+                "tipo_item": item.tipo_item,
+                "raridade": item.raridade,
+                "estado_exterior": (
+                    item.estado_exterior
+                ),
+                "imagem": (
+                    item.url_icone_grande
+                    or item.url_icone
+                ),
+                "stattrak": item.stattrak,
+                "souvenir": item.souvenir,
+                "trocavel": item.trocavel,
+                "comercializavel": (
+                    item.comercializavel
+                ),
+                "quantidade": item.quantidade,
+                "preco": (
+                    {
+                        "plataforma": (
+                            preco.plataforma
+                        ),
+                        "moeda": preco.moeda,
+                        "menor_preco": (
+                            str(preco.menor_preco)
+                            if preco.menor_preco
+                            is not None
+                            else None
+                        ),
+                        "maior_preco": (
+                            str(preco.maior_preco)
+                            if preco.maior_preco
+                            is not None
+                            else None
+                        ),
+                        "preco_medio": (
+                            str(preco.preco_medio)
+                            if preco.preco_medio
+                            is not None
+                            else None
+                        ),
+                        "preco_mediano": (
+                            str(preco.preco_mediano)
+                            if preco.preco_mediano
+                            is not None
+                            else None
+                        ),
+                        "quantidade_anuncios": (
+                            preco.quantidade_anuncios
+                        ),
+                        "coletado_em": (
+                            preco.coletado_em.isoformat()
+                        ),
+                        "atualizado_na_origem_em": (
+                            preco
+                            .atualizado_na_origem_em
+                            .isoformat()
+                            if (
+                                preco
+                                .atualizado_na_origem_em
+                                is not None
+                            )
+                            else None
+                        ),
+                    }
+                    if preco is not None
+                    else None
+                ),
+            }
+        )
 
     return jsonify(
         {
