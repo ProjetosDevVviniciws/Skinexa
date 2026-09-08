@@ -188,3 +188,93 @@ def inserir_historico_preco(
         )
 
     return int(historico_id)
+
+def obter_ultimos_precos_itens_plataforma(
+    conexao: Connection,
+    *,
+    item_catalogo_ids: set[int],
+    plataforma_mercado_id: int,
+) -> dict[int, dict[str, object]]:
+    """
+    Obtém o preço mais recente de cada item
+    para uma determinada plataforma.
+
+    O registro mais recente é definido por
+    coletado_em e, em caso de empate, pelo id.
+    """
+
+    if not item_catalogo_ids:
+        return {}
+
+    consulta = text(
+        """
+        SELECT
+            historico.item_catalogo_id,
+            historico.moeda,
+            historico.menor_preco,
+            historico.maior_preco,
+            historico.preco_medio,
+            historico.preco_mediano,
+            historico.maior_ordem_compra,
+            historico.quantidade_anuncios,
+            historico.volume_vendas,
+            historico.coletado_em,
+            historico.atualizado_na_origem_em
+        FROM (
+            SELECT
+                hp.*,
+                ROW_NUMBER() OVER (
+                    PARTITION BY hp.item_catalogo_id
+                    ORDER BY
+                        hp.coletado_em DESC,
+                        hp.id DESC
+                ) AS posicao
+            FROM historico_precos AS hp
+            WHERE
+                hp.plataforma_mercado_id =
+                    :plataforma_mercado_id
+                AND hp.item_catalogo_id
+                    IN :item_catalogo_ids
+        ) AS historico
+        WHERE historico.posicao = 1
+        """
+    ).bindparams(
+        bindparam(
+            "item_catalogo_ids",
+            expanding=True,
+        )
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "item_catalogo_ids": tuple(
+                item_catalogo_ids
+            ),
+            "plataforma_mercado_id": (
+                plataforma_mercado_id
+            ),
+        },
+    )
+
+    return {
+        int(registro.item_catalogo_id): {
+            "moeda": registro.moeda,
+            "menor_preco": registro.menor_preco,
+            "maior_preco": registro.maior_preco,
+            "preco_medio": registro.preco_medio,
+            "preco_mediano": registro.preco_mediano,
+            "maior_ordem_compra": (
+                registro.maior_ordem_compra
+            ),
+            "quantidade_anuncios": (
+                registro.quantidade_anuncios
+            ),
+            "volume_vendas": registro.volume_vendas,
+            "coletado_em": registro.coletado_em,
+            "atualizado_na_origem_em": (
+                registro.atualizado_na_origem_em
+            ),
+        }
+        for registro in resultado
+    }
