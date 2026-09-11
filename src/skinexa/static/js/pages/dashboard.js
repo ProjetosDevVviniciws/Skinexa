@@ -764,6 +764,12 @@ function criarElementoInventario(item) {
 
     conteudo.appendChild(lista);
 
+    const preco = criarElementoPreco(
+        item.preco
+    );
+
+    conteudo.appendChild(preco);
+
     if (item.stattrak) {
         const stattrak = document.createElement(
             "span"
@@ -787,6 +793,121 @@ function criarElementoInventario(item) {
     article.appendChild(conteudo);
 
     return article;
+}
+
+function criarElementoPreco(preco) {
+    const container = document.createElement(
+        "div"
+    );
+
+    container.classList.add(
+        "inventory-price"
+    );
+
+    const rotulo = document.createElement(
+        "span"
+    );
+
+    rotulo.classList.add(
+        "inventory-price-label"
+    );
+
+    const valor = document.createElement(
+        "strong"
+    );
+
+    valor.classList.add(
+        "inventory-price-value"
+    );
+
+    if (
+        !preco
+        || preco.menor_preco === null
+    ) {
+        rotulo.textContent =
+            "Preço de mercado";
+
+        valor.textContent =
+            "Preço indisponível";
+
+        container.classList.add(
+            "inventory-price-unavailable"
+        );
+
+        container.append(
+            rotulo,
+            valor
+        );
+
+        return container;
+    }
+
+    rotulo.textContent = (
+        `Menor preço • ${
+            formatarNomePlataforma(
+                preco.plataforma
+            )
+        }`
+    );
+
+    valor.textContent = formatarMoeda(
+        preco.menor_preco,
+        preco.moeda
+    );
+
+    container.append(
+        rotulo,
+        valor
+    );
+
+    return container;
+}
+
+function formatarMoeda(
+    valor,
+    moeda
+) {
+    const numero = Number(valor);
+
+    if (!Number.isFinite(numero)) {
+        return "Preço indisponível";
+    }
+
+    const moedaNormalizada = (
+        typeof moeda === "string"
+        && /^[A-Z]{3}$/.test(moeda)
+    )
+        ? moeda
+        : "BRL";
+
+    try {
+        return new Intl.NumberFormat(
+            "pt-BR",
+            {
+                style: "currency",
+                currency: moedaNormalizada,
+            }
+        ).format(numero);
+
+    } catch (erro) {
+        return `${moedaNormalizada} ${valor}`;
+    }
+}
+
+function formatarNomePlataforma(
+    plataforma
+) {
+    const nomes = {
+        skinport: "Skinport",
+        csfloat: "CSFloat",
+        steam: "Steam",
+    };
+
+    return (
+        nomes[plataforma]
+        || plataforma
+        || "Mercado"
+    );
 }
 
 function adicionarInformacao(
