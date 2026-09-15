@@ -278,3 +278,79 @@ def obter_ultimos_precos_itens_plataforma(
         }
         for registro in resultado
     }
+    
+def obter_ultimos_precos_item_por_plataforma(
+    conexao: Connection,
+    *,
+    item_catalogo_id: int,
+) -> list[dict]:
+    """
+    Retorna o registro de preço mais recente
+    de um item para cada plataforma.
+    """
+
+    consulta = text(
+        """
+        SELECT
+            hp.id,
+            hp.item_catalogo_id,
+            hp.plataforma_mercado_id,
+
+            pm.identificador AS plataforma,
+
+            hp.moeda,
+            hp.menor_preco,
+            hp.maior_preco,
+            hp.preco_medio,
+            hp.preco_mediano,
+            hp.maior_ordem_compra,
+
+            hp.quantidade_anuncios,
+            hp.volume_vendas,
+
+            hp.coletado_em,
+            hp.atualizado_na_origem_em
+
+        FROM historico_precos AS hp
+
+        INNER JOIN plataformas_mercado AS pm
+            ON pm.id = hp.plataforma_mercado_id
+
+        WHERE
+            hp.item_catalogo_id = :item_catalogo_id
+
+            AND hp.id = (
+                SELECT hp_interno.id
+
+                FROM historico_precos AS hp_interno
+
+                WHERE
+                    hp_interno.item_catalogo_id
+                        = hp.item_catalogo_id
+
+                    AND hp_interno.plataforma_mercado_id
+                        = hp.plataforma_mercado_id
+
+                ORDER BY
+                    hp_interno.coletado_em DESC,
+                    hp_interno.id DESC
+
+                LIMIT 1
+            )
+
+        ORDER BY
+            pm.identificador ASC
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "item_catalogo_id": item_catalogo_id,
+        },
+    )
+
+    return [
+        dict(registro._mapping)
+        for registro in resultado
+    ]
