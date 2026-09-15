@@ -10,6 +10,7 @@ from skinexa.database.queries.historico_precos import (
     obter_plataforma_mercado_id_por_identificador,
     obter_itens_catalogo_ids_por_nomes_mercado,
     obter_ultimos_precos_itens_plataforma,
+    obter_ultimos_precos_item_por_plataforma,
 )
 
 def test_obter_item_catalogo_id_por_nome_mercado():
@@ -406,3 +407,161 @@ def test_obter_ultimos_precos_itens_plataforma_sem_itens():
     assert resultado == {}
 
     conexao.execute.assert_not_called()
+    
+def test_obter_ultimos_precos_item_por_plataforma():
+    """Testa busca do último preço de cada plataforma."""
+
+    conexao = Mock()
+
+    registro_skinport = Mock()
+
+    registro_skinport._mapping = {
+        "id": 10,
+        "item_catalogo_id": 1,
+        "plataforma_mercado_id": 2,
+        "plataforma": "skinport",
+        "moeda": "BRL",
+        "menor_preco": Decimal("103.16"),
+        "maior_preco": Decimal("7364.27"),
+        "preco_medio": Decimal("424.00"),
+        "preco_mediano": Decimal("143.05"),
+        "maior_ordem_compra": None,
+        "quantidade_anuncios": 134,
+        "volume_vendas": None,
+        "coletado_em": datetime(
+            2026,
+            9,
+            15,
+            10,
+            28,
+        ),
+        "atualizado_na_origem_em": datetime(
+            2026,
+            9,
+            15,
+            10,
+            25,
+        ),
+    }
+
+    registro_csfloat = Mock()
+
+    registro_csfloat._mapping = {
+        "id": 11,
+        "item_catalogo_id": 1,
+        "plataforma_mercado_id": 3,
+        "plataforma": "csfloat",
+        "moeda": "BRL",
+        "menor_preco": Decimal("98.40"),
+        "maior_preco": Decimal("150.00"),
+        "preco_medio": Decimal("112.50"),
+        "preco_mediano": Decimal("108.00"),
+        "maior_ordem_compra": None,
+        "quantidade_anuncios": 42,
+        "volume_vendas": None,
+        "coletado_em": datetime(
+            2026,
+            9,
+            15,
+            10,
+            32,
+        ),
+        "atualizado_na_origem_em": datetime(
+            2026,
+            9,
+            15,
+            10,
+            30,
+        ),
+    }
+
+    conexao.execute.return_value = [
+        registro_skinport,
+        registro_csfloat,
+    ]
+
+    resultado = (
+        obter_ultimos_precos_item_por_plataforma(
+            conexao,
+            item_catalogo_id=1,
+        )
+    )
+
+    assert resultado == [
+        {
+            "id": 10,
+            "item_catalogo_id": 1,
+            "plataforma_mercado_id": 2,
+            "plataforma": "skinport",
+            "moeda": "BRL",
+            "menor_preco": Decimal("103.16"),
+            "maior_preco": Decimal("7364.27"),
+            "preco_medio": Decimal("424.00"),
+            "preco_mediano": Decimal("143.05"),
+            "maior_ordem_compra": None,
+            "quantidade_anuncios": 134,
+            "volume_vendas": None,
+            "coletado_em": datetime(
+                2026,
+                9,
+                15,
+                10,
+                28,
+            ),
+            "atualizado_na_origem_em": datetime(
+                2026,
+                9,
+                15,
+                10,
+                25,
+            ),
+        },
+        {
+            "id": 11,
+            "item_catalogo_id": 1,
+            "plataforma_mercado_id": 3,
+            "plataforma": "csfloat",
+            "moeda": "BRL",
+            "menor_preco": Decimal("98.40"),
+            "maior_preco": Decimal("150.00"),
+            "preco_medio": Decimal("112.50"),
+            "preco_mediano": Decimal("108.00"),
+            "maior_ordem_compra": None,
+            "quantidade_anuncios": 42,
+            "volume_vendas": None,
+            "coletado_em": datetime(
+                2026,
+                9,
+                15,
+                10,
+                32,
+            ),
+            "atualizado_na_origem_em": datetime(
+                2026,
+                9,
+                15,
+                10,
+                30,
+            ),
+        },
+    ]
+
+    conexao.execute.assert_called_once()
+    
+def test_obter_ultimos_precos_item_por_plataforma_sem_historico():
+    """Testa item sem histórico de preços."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    resultado = (
+        obter_ultimos_precos_item_por_plataforma(
+            conexao,
+            item_catalogo_id=999,
+        )
+    )
+
+    assert resultado == []
+
+    conexao.execute.assert_called_once()
