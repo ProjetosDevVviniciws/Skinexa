@@ -7,6 +7,7 @@ from skinexa.core.extensions import login_manager, csrf
 from skinexa.blueprints.home.routes import home_bp
 from skinexa.blueprints.auth.routes import auth_bp
 from skinexa.blueprints.dashboard.routes import dashboard_bp
+from skinexa.blueprints.mercado.routes import mercado_bp
 from skinexa.core.errors import registrar_tratadores_erros
 
 mimetypes.add_type(
@@ -49,6 +50,7 @@ def _registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(home_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(mercado_bp)
     
 def _configurar_autenticacao() -> None:
     """Configura toda a autenticação da aplicação."""
