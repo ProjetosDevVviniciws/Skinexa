@@ -74,16 +74,43 @@ class InstanciaItemSteamDTO:
     metadados_origem: dict[str, Any]
 
 @dataclass(frozen=True, slots=True)
+class AcessorioItemSteamDTO:
+    """Representa um acessório aplicado a uma instância Steam."""
+
+    identificador_externo: str | None
+    tipo_acessorio: str
+
+    nome_mercado: str | None
+    nome_exibicao: str
+
+    variante: str | None
+    torneio: str | None
+    equipe: str | None
+    jogador: str | None
+    raridade: str | None
+
+    url_icone: str | None
+
+    posicao: int
+    desgaste: Decimal | None
+    rotacao: Decimal | None
+    escala: Decimal | None
+    deslocamento_x: Decimal | None
+    deslocamento_y: Decimal | None
+
+    fonte_dados: str
+    metadados_origem: dict[str, Any]
+
+@dataclass(frozen=True, slots=True)
 class ItemInventarioSteamDTO:
     """
-    Agrupa o cadastro genérico e a instância específica.
-
-    Essa estrutura facilita a sincronização posterior com as tabelas
-    itens_catalogo e instancias_itens.
+    Agrupa o cadastro genérico, a instância específica
+    e os acessórios aplicados ao item.
     """
 
     catalogo: ItemCatalogoSteamDTO
     instancia: InstanciaItemSteamDTO
+    acessorios: tuple[AcessorioItemSteamDTO, ...]
     
 @dataclass(frozen=True, slots=True)
 class ItemInventarioDTO:
