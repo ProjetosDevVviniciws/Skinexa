@@ -1,9 +1,16 @@
 from typing import Any, Iterable
 
+import json
+
 from skinexa.dto.steam.inventario import (
+    AcessorioItemSteamDTO,
     InstanciaItemSteamDTO,
     ItemCatalogoSteamDTO,
     ItemInventarioSteamDTO,
+)
+
+from skinexa.integrations.steam.parsers.adesivos import (
+    ParserAdesivosSteam,
 )
 
 from skinexa.integrations.steam.inventario import (
@@ -44,7 +51,7 @@ def normalizar_inventario_steam(
                 "Não foi encontrada uma descrição para o item "
                 f"asset_id={ativo.get('assetid')}."
             )
-
+        
         catalogo = _normalizar_item_catalogo(
             descricao=descricao,
             app_id=inventario.app_id,
@@ -57,11 +64,16 @@ def normalizar_inventario_steam(
             app_id=inventario.app_id,
             contexto_id=str(inventario.contexto_id),
         )
-
+        
+        acessorios = _normalizar_acessorios(
+            descricao=descricao,
+        )
+        
         itens_normalizados.append(
             ItemInventarioSteamDTO(
                 catalogo=catalogo,
                 instancia=instancia,
+                acessorios=acessorios,
             )
         )
 
@@ -312,6 +324,75 @@ def _normalizar_instancia(
             "description": dict(descricao),
         },
     )
+
+def _normalizar_acessorios(
+    *,
+    descricao: dict[str, Any],
+) -> tuple[AcessorioItemSteamDTO, ...]:
+    """Normaliza acessórios aplicados informados pela Steam."""
+
+    descricoes = descricao.get("descriptions")
+
+    if not isinstance(descricoes, list):
+        return ()
+
+    acessorios: list[AcessorioItemSteamDTO] = []
+
+    for item_descricao in descricoes:
+        if not isinstance(item_descricao, dict):
+            continue
+
+        nome = _obter_texto(
+            item_descricao.get("name")
+        )
+
+        if not nome:
+            continue
+
+        if nome.casefold() != "sticker_info":
+            continue
+
+        valor = _obter_texto(
+            item_descricao.get("value")
+        )
+
+        if not valor:
+            continue
+
+        parser = ParserAdesivosSteam()
+        parser.feed(valor)
+
+        for ordem, adesivo in enumerate(
+            parser.adesivos
+        ):
+            acessorios.append(
+                AcessorioItemSteamDTO(
+                    identificador_externo=None,
+                    tipo_acessorio="adesivo",
+                    nome_mercado=None,
+                    nome_exibicao=(
+                        adesivo.nome_exibicao
+                    ),
+                    variante=None,
+                    torneio=None,
+                    equipe=None,
+                    jogador=None,
+                    raridade=None,
+                    url_icone=adesivo.url_icone,
+                    posicao=ordem,
+                    desgaste=None,
+                    rotacao=None,
+                    escala=None,
+                    deslocamento_x=None,
+                    deslocamento_y=None,
+                    fonte_dados="steam",
+                    metadados_origem={
+                        "ordem_exibicao": ordem,
+                    },
+                )
+            )
+
+    return tuple(acessorios)
 
 def _normalizar_tags(
     valor: Any,
