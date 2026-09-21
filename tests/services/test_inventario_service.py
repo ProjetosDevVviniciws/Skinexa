@@ -1,4 +1,5 @@
 from contextlib import nullcontext
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,8 +8,10 @@ from skinexa.dto.steam.inventario import (
     InstanciaItemSteamDTO,
     ItemCatalogoSteamDTO,
     ItemInventarioSteamDTO,
+    ItemInventarioDTO,
 )
 from skinexa.integrations.steam.inventario import InventarioSteamBruto
+
 from skinexa.services.inventory.service import InventarioService
 
 from datetime import UTC, datetime, timedelta
@@ -16,9 +19,6 @@ from datetime import UTC, datetime, timedelta
 from skinexa.exceptions.inventario import (
     CooldownSincronizacaoAtivo,
 )
-
-from skinexa.dto.steam.inventario import ItemInventarioDTO
-from skinexa.services.inventory.service import InventarioService
 
 STEAM_ID_TESTE = "76561198000000001"
 
@@ -79,6 +79,7 @@ def criar_item_normalizado() -> ItemInventarioSteamDTO:
     return ItemInventarioSteamDTO(
         catalogo=catalogo,
         instancia=instancia,
+        acessorios=(),
     )
 
 def criar_inventario_bruto() -> InventarioSteamBruto:
@@ -284,6 +285,7 @@ def test_rejeitar_item_de_outro_usuario(
         ItemInventarioSteamDTO(
             catalogo=item.catalogo,
             instancia=instancia_invalida,
+            acessorios=(),
         ),
     )
 
