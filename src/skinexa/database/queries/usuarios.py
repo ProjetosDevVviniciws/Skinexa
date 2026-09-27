@@ -4,10 +4,6 @@ from sqlalchemy import text
 
 from skinexa.database.connection import engine
 
-from sqlalchemy.engine import Connection
-
-from datetime import datetime
-
 def buscar_usuario_por_steam_id(
     steam_id: str,
 ) -> dict[str, Any] | None:
@@ -203,48 +199,3 @@ def salvar_usuario_steam(
         )
 
     return usuario_atualizado
-
-def buscar_ultima_sincronizacao_inventario(
-    conexao: Connection,
-    usuario_id: int
-) -> datetime | None:
-    """Retorna a última sincronização bem-sucedida do inventário."""
-
-    consulta = text(
-        """
-        SELECT
-            ultima_sincronizacao_inventario_em
-        FROM usuarios
-        WHERE id = :usuario_id
-        LIMIT 1
-        """
-    )
-
-    resultado = conexao.execute(
-        consulta,
-        {"usuario_id": usuario_id},
-    ).scalar_one_or_none()
-
-    return resultado
-
-def atualizar_ultima_sincronizacao_inventario(
-    conexao: Connection,
-    usuario_id: int,
-) -> bool:
-    """Registra uma sincronização de inventário bem-sucedida."""
-
-    consulta = text(
-        """
-        UPDATE usuarios
-        SET
-            ultima_sincronizacao_inventario_em = UTC_TIMESTAMP()
-        WHERE id = :usuario_id
-        """
-    )
-
-    resultado = conexao.execute(
-        consulta,
-        {"usuario_id": usuario_id},
-    )
-
-    return resultado.rowcount > 0
