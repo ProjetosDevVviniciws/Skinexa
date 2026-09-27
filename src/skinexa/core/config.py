@@ -22,8 +22,6 @@ class Config:
     SESSION_COOKIE_SECURE = False
 
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
-    
-    INVENTARIO_COOLDOWN_SEGUNDOS = 120
 
 class DevelopmentConfig(Config):
     """Configurações básicas para  o ambiente de desenvolvimento."""
