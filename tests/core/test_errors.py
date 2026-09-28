@@ -96,10 +96,15 @@ def test_erro_interno_json(app, client):
         not in resposta.get_data(as_text=True)
     )
     
-def test_erro_405_json(client):
+def test_erro_405_json(app, client):
     """Testa a resposta de erro 405 em JSON."""
+
+    @app.get("/teste-metodo-nao-permitido")
+    def teste_metodo_nao_permitido():
+        return "OK"
+
     resposta = client.put(
-        "/dashboard/sincronizar-inventario",
+        "/teste-metodo-nao-permitido",
         headers={
             "Accept": "application/json",
         },
@@ -111,3 +116,11 @@ def test_erro_405_json(client):
     dados = resposta.get_json()
 
     assert dados["sucesso"] is False
+
+    assert (
+        dados["mensagem"]
+        == (
+            "O método HTTP utilizado não é permitido "
+            "para este recurso."
+        )
+    )
