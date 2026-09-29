@@ -1,345 +1,47 @@
-from datetime import datetime
-from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import text, bindparam
+from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-def obter_item_catalogo_id_por_nome_mercado(
+def obter_item_catalogo_por_id(
     conexao: Connection,
-    nome_mercado: str,
-) -> int | None:
-    """
-    Obtém o ID de um item do catálogo
-    a partir do nome de mercado.
-    """
-
-    consulta = text(
-        """
-        SELECT id
-        FROM itens_catalogo
-        WHERE nome_mercado = :nome_mercado
-        LIMIT 1
-        """
-    )
-
-    resultado = conexao.execute(
-        consulta,
-        {
-            "nome_mercado": nome_mercado,
-        },
-    ).scalar_one_or_none()
-
-    if resultado is None:
-        return None
-
-    return int(resultado)
-
-def obter_itens_catalogo_ids_por_nomes_mercado(
-    conexao: Connection,
-    nomes_mercado: set[str],
-) -> dict[str, int]:
-    """
-    Obtém IDs dos itens do catálogo
-    pelos respectivos nomes de mercado.
-    """
-
-    if not nomes_mercado:
-        return {}
+    item_catalogo_id: int,
+) -> dict[str, Any] | None:
+    """Obtém um item do catálogo pelo identificador interno."""
 
     consulta = text(
         """
         SELECT
             id,
-            nome_mercado
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem,
+            criado_em,
+            atualizado_em
         FROM itens_catalogo
-        WHERE nome_mercado IN :nomes_mercado
-        """
-    ).bindparams(
-        bindparam(
-            "nomes_mercado",
-            expanding=True,
-        )
-    )
-
-    resultado = conexao.execute(
-        consulta,
-        {
-            "nomes_mercado": tuple(
-                nomes_mercado
-            ),
-        },
-    )
-
-    return {
-        str(registro.nome_mercado): int(registro.id)
-        for registro in resultado
-    }
-
-def obter_plataforma_mercado_id_por_identificador(
-    conexao: Connection,
-    identificador: str,
-) -> int | None:
-    """
-    Obtém o ID de uma plataforma de mercado
-    a partir do identificador interno.
-    """
-
-    consulta = text(
-        """
-        SELECT id
-        FROM plataformas_mercado
-        WHERE identificador = :identificador
-          AND ativa = 1
+        WHERE id = :item_catalogo_id
         LIMIT 1
-        """
-    )
-
-    resultado = conexao.execute(
-        consulta,
-        {
-            "identificador": identificador,
-        },
-    ).scalar_one_or_none()
-
-    if resultado is None:
-        return None
-
-    return int(resultado)
-
-
-def inserir_historico_preco(
-    conexao: Connection,
-    *,
-    item_catalogo_id: int,
-    plataforma_mercado_id: int,
-    moeda: str,
-    menor_preco: Decimal | None,
-    maior_preco: Decimal | None,
-    preco_medio: Decimal | None,
-    preco_mediano: Decimal | None,
-    maior_ordem_compra: Decimal | None,
-    quantidade_anuncios: int | None,
-    volume_vendas: int | None,
-    atualizado_na_origem_em: datetime | None,
-) -> int:
-    """
-    Registra uma nova coleta de preço no histórico.
-
-    Retorna o ID da linha criada.
-    """
-
-    consulta = text(
-        """
-        INSERT INTO historico_precos (
-            item_catalogo_id,
-            plataforma_mercado_id,
-            moeda,
-            menor_preco,
-            maior_preco,
-            preco_medio,
-            preco_mediano,
-            maior_ordem_compra,
-            quantidade_anuncios,
-            volume_vendas,
-            atualizado_na_origem_em
-        )
-        VALUES (
-            :item_catalogo_id,
-            :plataforma_mercado_id,
-            :moeda,
-            :menor_preco,
-            :maior_preco,
-            :preco_medio,
-            :preco_mediano,
-            :maior_ordem_compra,
-            :quantidade_anuncios,
-            :volume_vendas,
-            :atualizado_na_origem_em
-        )
-        """
-    )
-
-    parametros = {
-        "item_catalogo_id": item_catalogo_id,
-        "plataforma_mercado_id": plataforma_mercado_id,
-        "moeda": moeda,
-        "menor_preco": menor_preco,
-        "maior_preco": maior_preco,
-        "preco_medio": preco_medio,
-        "preco_mediano": preco_mediano,
-        "maior_ordem_compra": maior_ordem_compra,
-        "quantidade_anuncios": quantidade_anuncios,
-        "volume_vendas": volume_vendas,
-        "atualizado_na_origem_em": (
-            atualizado_na_origem_em
-        ),
-    }
-
-    resultado = conexao.execute(
-        consulta,
-        parametros,
-    )
-
-    historico_id = resultado.lastrowid
-
-    if historico_id is None:
-        raise RuntimeError(
-            "O banco não retornou o ID do histórico de preço."
-        )
-
-    return int(historico_id)
-
-def obter_ultimos_precos_itens_plataforma(
-    conexao: Connection,
-    *,
-    item_catalogo_ids: set[int],
-    plataforma_mercado_id: int,
-) -> dict[int, dict[str, object]]:
-    """
-    Obtém o preço mais recente de cada item
-    para uma determinada plataforma.
-
-    O registro mais recente é definido por
-    coletado_em e, em caso de empate, pelo id.
-    """
-
-    if not item_catalogo_ids:
-        return {}
-
-    consulta = text(
-        """
-        SELECT
-            historico.item_catalogo_id,
-            historico.moeda,
-            historico.menor_preco,
-            historico.maior_preco,
-            historico.preco_medio,
-            historico.preco_mediano,
-            historico.maior_ordem_compra,
-            historico.quantidade_anuncios,
-            historico.volume_vendas,
-            historico.coletado_em,
-            historico.atualizado_na_origem_em
-        FROM (
-            SELECT
-                hp.*,
-                ROW_NUMBER() OVER (
-                    PARTITION BY hp.item_catalogo_id
-                    ORDER BY
-                        hp.coletado_em DESC,
-                        hp.id DESC
-                ) AS posicao
-            FROM historico_precos AS hp
-            WHERE
-                hp.plataforma_mercado_id =
-                    :plataforma_mercado_id
-                AND hp.item_catalogo_id
-                    IN :item_catalogo_ids
-        ) AS historico
-        WHERE historico.posicao = 1
-        """
-    ).bindparams(
-        bindparam(
-            "item_catalogo_ids",
-            expanding=True,
-        )
-    )
-
-    resultado = conexao.execute(
-        consulta,
-        {
-            "item_catalogo_ids": tuple(
-                item_catalogo_ids
-            ),
-            "plataforma_mercado_id": (
-                plataforma_mercado_id
-            ),
-        },
-    )
-
-    return {
-        int(registro.item_catalogo_id): {
-            "moeda": registro.moeda,
-            "menor_preco": registro.menor_preco,
-            "maior_preco": registro.maior_preco,
-            "preco_medio": registro.preco_medio,
-            "preco_mediano": registro.preco_mediano,
-            "maior_ordem_compra": (
-                registro.maior_ordem_compra
-            ),
-            "quantidade_anuncios": (
-                registro.quantidade_anuncios
-            ),
-            "volume_vendas": registro.volume_vendas,
-            "coletado_em": registro.coletado_em,
-            "atualizado_na_origem_em": (
-                registro.atualizado_na_origem_em
-            ),
-        }
-        for registro in resultado
-    }
-    
-def obter_ultimos_precos_item_por_plataforma(
-    conexao: Connection,
-    *,
-    item_catalogo_id: int,
-) -> list[dict]:
-    """
-    Retorna o registro de preço mais recente
-    de um item para cada plataforma.
-    """
-
-    consulta = text(
-        """
-        SELECT
-            hp.id,
-            hp.item_catalogo_id,
-            hp.plataforma_mercado_id,
-
-            pm.identificador AS plataforma,
-
-            hp.moeda,
-            hp.menor_preco,
-            hp.maior_preco,
-            hp.preco_medio,
-            hp.preco_mediano,
-            hp.maior_ordem_compra,
-
-            hp.quantidade_anuncios,
-            hp.volume_vendas,
-
-            hp.coletado_em,
-            hp.atualizado_na_origem_em
-
-        FROM historico_precos AS hp
-
-        INNER JOIN plataformas_mercado AS pm
-            ON pm.id = hp.plataforma_mercado_id
-
-        WHERE
-            hp.item_catalogo_id = :item_catalogo_id
-
-            AND hp.id = (
-                SELECT hp_interno.id
-
-                FROM historico_precos AS hp_interno
-
-                WHERE
-                    hp_interno.item_catalogo_id
-                        = hp.item_catalogo_id
-
-                    AND hp_interno.plataforma_mercado_id
-                        = hp.plataforma_mercado_id
-
-                ORDER BY
-                    hp_interno.coletado_em DESC,
-                    hp_interno.id DESC
-
-                LIMIT 1
-            )
-
-        ORDER BY
-            pm.identificador ASC
         """
     )
 
@@ -348,9 +50,148 @@ def obter_ultimos_precos_item_por_plataforma(
         {
             "item_catalogo_id": item_catalogo_id,
         },
+    ).mappings().first()
+
+    if resultado is None:
+        return None
+
+    return dict(resultado)
+
+def obter_item_catalogo_por_nome_mercado(
+    conexao: Connection,
+    *,
+    app_id: int,
+    nome_mercado: str,
+) -> dict[str, Any] | None:
+    """
+    Obtém um item do catálogo pelo app_id
+    e nome de mercado.
+    """
+
+    consulta = text(
+        """
+        SELECT
+            id,
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem,
+            criado_em,
+            atualizado_em
+        FROM itens_catalogo
+        WHERE app_id = :app_id
+          AND nome_mercado = :nome_mercado
+        LIMIT 1
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "app_id": app_id,
+            "nome_mercado": nome_mercado,
+        },
+    ).mappings().first()
+
+    if resultado is None:
+        return None
+
+    return dict(resultado)
+
+def listar_itens_catalogo(
+    conexao: Connection,
+    *,
+    limite: int,
+    deslocamento: int,
+) -> list[dict[str, Any]]:
+    """Lista itens do catálogo com paginação."""
+
+    consulta = text(
+        """
+        SELECT
+            id,
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem,
+            criado_em,
+            atualizado_em
+        FROM itens_catalogo
+        ORDER BY
+            nome_exibicao ASC,
+            id ASC
+        LIMIT :limite
+        OFFSET :deslocamento
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "limite": limite,
+            "deslocamento": deslocamento,
+        },
     )
 
     return [
         dict(registro._mapping)
         for registro in resultado
     ]
+
+def contar_itens_catalogo(
+    conexao: Connection,
+) -> int:
+    """Retorna a quantidade total de itens do catálogo."""
+
+    consulta = text(
+        """
+        SELECT COUNT(*)
+        FROM itens_catalogo
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta
+    ).scalar_one()
+
+    return int(resultado)
