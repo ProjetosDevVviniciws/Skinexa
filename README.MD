@@ -1,24 +1,28 @@
-# Skinexa
+<div align="center">
 
-<p align="center">
-  <img src="assets/logo.png" alt="Skinexa Logo" width="180">
-</p>
-
-<p align="center">
-  <strong>Pesquise, compare e acompanhe o mercado de itens do Counter-Strike 2 em um único lugar.</strong>
-</p>
+<img src="src/skinexa/static/images/logo_readme.png" alt="Skinexa" width="200">
 
 ---
+
+<p>
+    Plataforma web para centralização, acompanhamento e análise do mercado de itens de Counter-Strike 2.
+</p>
+
+</div>
+
+<br>
+
+> 🚧 **Projeto em desenvolvimento**
+>
+> Funcionalidades, arquitetura e documentação podem sofrer alterações até a consolidação da versão 1.0.
 
 ## 📖 Sobre o projeto
 
 O **Skinexa** é um projeto pessoal de engenharia de software desenvolvido com o objetivo de centralizar informações relacionadas ao mercado de itens do Counter-Strike 2.
 
-A plataforma reúne dados provenientes de diferentes marketplaces em uma única interface, permitindo que o usuário pesquise itens, compare preços, monitore variações de valor, acompanhe históricos de preços e configure alertas personalizados.
+A plataforma busca reunir dados provenientes de diferentes marketplaces em uma única interface, permitindo pesquisar itens, comparar preços, acompanhar históricos e variações de valor e, futuramente, configurar alertas personalizados.
 
-Além de resolver um problema real enfrentado pela comunidade, o projeto também tem como objetivo aplicar boas práticas de desenvolvimento de software, arquitetura, segurança, persistência de dados e integração com APIs externas.
-
----
+Além de solucionar um problema real enfrentado pela comunidade, o projeto tem como objetivo aplicar boas práticas de desenvolvimento de software, arquitetura, segurança, persistência de dados, testes automatizados e integração com APIs externas.
 
 ## 🎯 Problema
 
@@ -27,34 +31,32 @@ Atualmente, jogadores, colecionadores e interessados no mercado de itens do Coun
 - pesquisar itens;
 - acompanhar preços;
 - comparar marketplaces;
-- analisar o histórico de preços;
+- analisar históricos de preços;
 - acompanhar variações de valor;
 - configurar alertas.
 
 Essa fragmentação dificulta o acompanhamento do mercado e torna o processo pouco prático.
 
----
-
 ## 💡 Solução
 
-O Skinexa centraliza essas informações em uma única plataforma.
+O Skinexa busca centralizar essas informações em uma única plataforma.
 
-A aplicação permitirá que o usuário:
+A versão 1.0 está sendo desenvolvida para permitir que o usuário:
 
 - pesquise itens do Counter-Strike 2;
 - visualize informações detalhadas sobre cada item;
 - compare preços entre diferentes marketplaces;
 - consulte preços do Steam Community Market;
-- acompanhe o histórico e a variação de preços;
+- acompanhe históricos e variações de preços;
 - visualize gráficos e indicadores;
 - configure alertas personalizados;
 - favorite itens para acompanhamento.
 
 A arquitetura foi projetada para permitir a integração progressiva de novos marketplaces, ampliando as possibilidades de comparação de preços ao longo da evolução do projeto.
 
----
+## 🚀 Funcionalidades planejadas para a versão 1.0
 
-## 🚀 Funcionalidades
+As funcionalidades abaixo representam o escopo planejado para a primeira versão do Skinexa. O progresso atual do desenvolvimento pode ser acompanhado no [Roadmap](#️-roadmap).
 
 ### Autenticação
 
@@ -120,9 +122,7 @@ A arquitetura foi projetada para permitir a integração progressiva de novos ma
 - Moeda
 - Preferências de notificações
 
----
-
-## 🛠️ Tecnologias
+## 🧱 Tecnologias utilizadas
 
 ### Backend
 
@@ -131,7 +131,6 @@ A arquitetura foi projetada para permitir a integração progressiva de novos ma
 - SQLAlchemy
 - Flask-Login
 - Flask-WTF
-- Flask-Migrate
 
 ### Frontend
 
@@ -140,7 +139,7 @@ A arquitetura foi projetada para permitir a integração progressiva de novos ma
 - Bootstrap 5
 - JavaScript
 
-### Banco de Dados
+### Banco de dados
 
 - MySQL
 
@@ -151,11 +150,6 @@ A arquitetura foi projetada para permitir a integração progressiva de novos ma
 - CSFloat
 - Banco Central do Brasil (BCB)
 
-### Infraestrutura
-
-- Docker
-- Docker Compose
-
 ### Ferramentas
 
 - Poetry
@@ -163,11 +157,9 @@ A arquitetura foi projetada para permitir a integração progressiva de novos ma
 - Git
 - GitHub
 
----
-
 ## 🏗️ Arquitetura
 
-O projeto utiliza uma organização modular, separando responsabilidades entre rotas, serviços, integrações externas, acesso a dados, DTOs e utilitários.
+O projeto utiliza uma organização modular, separando responsabilidades entre rotas, serviços, integrações externas, acesso a dados, DTOs, domínio e utilitários.
 
 ```text
 Cliente (Browser)
@@ -195,15 +187,13 @@ SQLAlchemy Core       │
 
 Essa separação reduz o acoplamento entre as regras da aplicação, persistência e serviços externos, facilitando testes, manutenção e inclusão de novas integrações.
 
----
+A aplicação também utiliza objetos de domínio e DTOs para separar os formatos recebidos de serviços externos das representações utilizadas internamente pelo Skinexa.
 
-## 📂 Estrutura do Projeto
+## 📂 Estrutura do projeto
 
 ```text
 A estrutura completa do projeto será documentada após a consolidação da arquitetura da versão 1.0.
 ```
-
----
 
 ## 🧪 Testes
 
@@ -213,11 +203,11 @@ Atualmente, a suíte possui testes envolvendo:
 
 - autenticação;
 - tratamento de erros;
-- dashboard;
 - persistência e histórico de preços;
 - integrações externas;
 - normalização de dados;
 - comparação e consulta de preços;
+- acesso a dados;
 - rotas;
 - services;
 - funções utilitárias.
@@ -228,9 +218,9 @@ Para executar a suíte:
 poetry run pytest
 ```
 
----
+## 💻 Como rodar a aplicação localmente
 
-## ⚙️ Como executar
+> ⚠️ As instruções de execução ainda podem sofrer alterações enquanto a versão 1.0 está em desenvolvimento.
 
 ```bash
 # Clonar o repositório
@@ -239,14 +229,32 @@ git clone https://github.com/ProjetosDevVviniciws/Skinexa.git
 # Entrar na pasta
 cd Skinexa
 
-# Instalar dependências
+# Instalar as dependências
 poetry install
 
 # Executar a aplicação
-poetry run flask run
+poetry run python run.py
 ```
 
----
+## 🗄️ Banco de dados
+
+O Skinexa utiliza **MySQL** para persistência dos dados da aplicação.
+
+O modelo de dados está sendo desenvolvido para suportar estruturas relacionadas a:
+
+- usuários e configurações;
+- plataformas de mercado;
+- catálogo de itens do Counter-Strike 2;
+- anúncios de marketplaces;
+- acessórios associados a anúncios;
+- histórico de preços;
+- favoritos;
+- alertas;
+- notificações.
+
+As definições do banco permanecem versionadas junto ao projeto e podem sofrer alterações durante o desenvolvimento da versão 1.0.
+
+A documentação definitiva para configuração e inicialização do banco de dados será adicionada após a consolidação do modelo de dados.
 
 ## 🗺️ Roadmap
 
@@ -255,7 +263,7 @@ poetry run flask run
 - [x] Autenticação com Steam
 - [x] Integração inicial com marketplaces
 - [x] Estrutura de comparação de preços
-- [x] Histórico de preços
+- [x] Infraestrutura base do histórico de preços
 - [x] Testes automatizados da base atual
 - [ ] Catálogo e pesquisa de itens
 - [ ] Comparação completa entre marketplaces
@@ -279,18 +287,8 @@ poetry run flask run
 - [ ] Aplicativo mobile
 - [ ] Push notifications
 
----
-
 ## 📄 Licença
 
 Este projeto está licenciado sob a licença MIT.
 
 Consulte o arquivo **LICENSE** para mais informações.
-
----
-
-## 👨‍💻 Autor
-
-Desenvolvido por **Vinícius Pinto Gonçalves**.
-
-Projeto desenvolvido para fins de estudo, portfólio e demonstração de conhecimentos em desenvolvimento de software.
