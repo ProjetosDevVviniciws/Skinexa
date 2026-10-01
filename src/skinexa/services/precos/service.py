@@ -5,11 +5,11 @@ from sqlalchemy.engine import Connection
 
 from skinexa.database.queries.historico_precos import (
     inserir_historico_preco,
-    obter_item_catalogo_id_por_nome_mercado,
     obter_plataforma_mercado_id_por_identificador,
-    obter_itens_catalogo_ids_por_nomes_mercado,
     obter_ultimos_precos_itens_plataforma,
 )
+
+from skinexa.database.queries.itens_catalogo import obter_itens_catalogo_ids_por_nomes_mercado
 
 from skinexa.domain.preco import PrecoMercado, UltimoPrecoMercado
 
@@ -68,7 +68,7 @@ def registrar_precos(
 
     plataformas: dict[str, int] = {}
 
-    for preco in precos:
+    for preco in precos_recebidos:
 
         plataforma_id = plataformas.get(
             preco.plataforma
