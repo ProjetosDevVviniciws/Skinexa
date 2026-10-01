@@ -1,4 +1,7 @@
+"""Orquestra as queries sem assumir responsabilidade sobre a conexão com o banco de dados."""
+
 from skinexa.blueprints.auth.usuario_sessao import UsuarioSessao
+
 from skinexa.database.queries.usuarios import (
     buscar_usuario_por_id,
     salvar_usuario_steam,
