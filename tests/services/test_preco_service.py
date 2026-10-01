@@ -169,7 +169,11 @@ def test_registrar_preco_rejeita_plataforma_indisponivel(
     conexao = Mock()
 
     mock_obter_plataforma.return_value = None
-
+    
+    mock_obter_itens.return_value = {
+            "AK-47 | Redline (Field-Tested)": 15,
+        }
+    
     with pytest.raises(
         PlataformaMercadoIndisponivel,
         match="skinport",
@@ -179,9 +183,6 @@ def test_registrar_preco_rejeita_plataforma_indisponivel(
             [_criar_preco()],
         )
 
-    mock_obter_itens.return_value = {
-        "AK-47 | Redline (Field-Tested)": 15,
-    }
     mock_inserir_historico.assert_not_called()
 
 @patch(
@@ -333,6 +334,56 @@ def test_registrar_precos_lista_vazia(
     mock_obter_itens.assert_not_called()
     mock_obter_plataforma.assert_not_called()
     mock_inserir_historico.assert_not_called()
+
+@patch(
+    "skinexa.services.precos.service."
+    "inserir_historico_preco",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_itens_catalogo_ids_por_nomes_mercado",
+)
+@patch(
+    "skinexa.services.precos.service."
+    "obter_plataforma_mercado_id_por_identificador",
+)
+
+def test_registrar_precos_aceita_iteravel(
+    mock_obter_plataforma,
+    mock_obter_itens,
+    mock_inserir_historico,
+):
+    """Testa registro de preços recebidos como iterável."""
+
+    conexao = Mock()
+
+    mock_obter_plataforma.return_value = 2
+
+    mock_obter_itens.return_value = {
+        "Item 1": 15,
+        "Item 2": 20,
+    }
+
+    precos = (
+        _criar_preco(
+            nome_mercado=nome_mercado,
+        )
+        for nome_mercado in (
+            "Item 1",
+            "Item 2",
+        )
+    )
+
+    resultado = registrar_precos(
+        conexao,
+        precos,
+    )
+
+    assert resultado.total_recebido == 2
+    assert resultado.total_registrado == 2
+    assert resultado.total_ignorado == 0
+
+    assert mock_inserir_historico.call_count == 2
     
 @patch(
     "skinexa.services.precos.service."
