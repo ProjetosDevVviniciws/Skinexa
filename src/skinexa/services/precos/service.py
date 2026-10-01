@@ -1,4 +1,7 @@
+"""Orquestra as queries sem assumir responsabilidade sobre a conexão com o banco de dados."""
+
 from dataclasses import dataclass
+
 from typing import Iterable
 
 from sqlalchemy.engine import Connection
@@ -9,7 +12,9 @@ from skinexa.database.queries.historico_precos import (
     obter_ultimos_precos_itens_plataforma,
 )
 
-from skinexa.database.queries.itens_catalogo import obter_itens_catalogo_ids_por_nomes_mercado
+from skinexa.database.queries.itens_catalogo import (
+    obter_itens_catalogo_ids_por_nomes_mercado,
+)
 
 from skinexa.domain.preco import PrecoMercado, UltimoPrecoMercado
 
