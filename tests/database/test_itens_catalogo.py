@@ -8,6 +8,7 @@ from skinexa.database.queries.itens_catalogo import (
     obter_item_catalogo_por_id,
     obter_item_catalogo_por_nome_mercado,
     obter_itens_catalogo_ids_por_nomes_mercado,
+    pesquisar_itens_catalogo_por_nome,
 )
 
 def criar_registro_item_catalogo(
@@ -410,3 +411,155 @@ def test_contar_itens_catalogo():
     assert resultado == 150
 
     conexao.execute.assert_called_once()
+
+def test_pesquisar_itens_catalogo_por_nome():
+    """Testa pesquisa textual no catálogo."""
+
+    conexao = Mock()
+
+    registro_1 = criar_registro_item_catalogo(
+        item_id=1,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline",
+    )
+
+    registro_2 = criar_registro_item_catalogo(
+        item_id=2,
+        nome_mercado="AK-47 | Redline (Minimal Wear)",
+        nome_exibicao="AK-47 | Redline",
+    )
+
+    conexao.execute.return_value = [
+        registro_1,
+        registro_2,
+    ]
+
+    resultado = pesquisar_itens_catalogo_por_nome(
+        conexao,
+        termo="Redline",
+        limite=20,
+        deslocamento=0,
+    )
+
+    assert resultado == [
+        registro_1._mapping,
+        registro_2._mapping,
+    ]
+
+    conexao.execute.assert_called_once()
+
+def test_pesquisar_itens_catalogo_por_nome_envia_parametros_corretos():
+    """Testa os parâmetros enviados na pesquisa."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    pesquisar_itens_catalogo_por_nome(
+        conexao,
+        termo="Redline",
+        limite=25,
+        deslocamento=50,
+    )
+
+    argumentos = conexao.execute.call_args
+
+    parametros = argumentos.args[1]
+
+    assert parametros == {
+        "termo": "%Redline%",
+        "limite": 25,
+        "deslocamento": 50,
+    }
+    
+def test_pesquisar_itens_catalogo_por_nome_remove_espacos():
+    """Testa remoção de espaços do termo de pesquisa."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    pesquisar_itens_catalogo_por_nome(
+        conexao,
+        termo="  Redline  ",
+        limite=20,
+        deslocamento=0,
+    )
+
+    argumentos = conexao.execute.call_args
+
+    parametros = argumentos.args[1]
+
+    assert parametros["termo"] == "%Redline%"
+    
+def test_pesquisar_itens_catalogo_por_nome_com_termo_vazio():
+    """Não consulta o banco quando o termo está vazio."""
+
+    conexao = Mock()
+
+    resultado = pesquisar_itens_catalogo_por_nome(
+        conexao,
+        termo="   ",
+        limite=20,
+        deslocamento=0,
+    )
+
+    assert resultado == []
+
+    conexao.execute.assert_not_called()
+
+def test_pesquisar_itens_catalogo_por_nome_sem_resultados():
+    """Testa pesquisa sem itens encontrados."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    resultado = pesquisar_itens_catalogo_por_nome(
+        conexao,
+        termo="Item inexistente",
+        limite=20,
+        deslocamento=0,
+    )
+
+    assert resultado == []
+
+    conexao.execute.assert_called_once()
+    
+def test_pesquisar_itens_catalogo_por_nome_com_limite_invalido():
+    """Testa pesquisa com limite inválido."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="O limite deve ser maior que zero.",
+    ):
+        pesquisar_itens_catalogo_por_nome(
+            conexao,
+            termo="Redline",
+            limite=0,
+            deslocamento=0,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_pesquisar_itens_catalogo_por_nome_com_deslocamento_invalido():
+    """Testa pesquisa com deslocamento inválido."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "O deslocamento não pode ser negativo."
+        ),
+    ):
+        pesquisar_itens_catalogo_por_nome(
+            conexao,
+            termo="Redline",
+            limite=20,
+            deslocamento=-1,
+        )
+
+    conexao.execute.assert_not_called()
