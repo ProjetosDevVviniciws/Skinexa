@@ -13,7 +13,7 @@ from skinexa.database.queries.itens_catalogo import (
 
 from skinexa.dto.catalogo.item import ItemCatalogoDTO
 
-def _converter_item_catalogo(
+def converter_item_catalogo(
     registro: dict[str, Any],
 ) -> ItemCatalogoDTO:
     """Converte um registro do banco em DTO de catálogo."""
@@ -68,7 +68,7 @@ def obter_item(
     if registro is None:
         return None
 
-    return _converter_item_catalogo(
+    return converter_item_catalogo(
         registro
     )
 
@@ -89,7 +89,7 @@ def obter_item_por_nome_mercado(
     if registro is None:
         return None
 
-    return _converter_item_catalogo(
+    return converter_item_catalogo(
         registro
     )
     
@@ -108,7 +108,7 @@ def listar_itens(
     )
 
     return [
-        _converter_item_catalogo(registro)
+        converter_item_catalogo(registro)
         for registro in registros
     ]
 
