@@ -3,6 +3,7 @@
 from typing import Any
 
 from sqlalchemy import bindparam, text
+
 from sqlalchemy.engine import Connection
 
 def obter_item_catalogo_por_id(
@@ -178,6 +179,86 @@ def obter_itens_catalogo_ids_por_nomes_mercado(
         str(registro.nome_mercado): int(registro.id)
         for registro in resultado
     }
+
+def pesquisar_itens_catalogo_por_nome(
+    conexao: Connection,
+    *,
+    termo: str,
+    limite: int,
+    deslocamento: int,
+) -> list[dict[str, Any]]:
+    """Pesquisa itens do catálogo por nome."""
+
+    termo_normalizado = termo.strip()
+
+    if not termo_normalizado:
+        return []
+
+    if limite < 1:
+        raise ValueError(
+            "O limite deve ser maior que zero."
+        )
+
+    if deslocamento < 0:
+        raise ValueError(
+            "O deslocamento não pode ser negativo."
+        )
+
+    consulta = text(
+        """
+        SELECT
+            id,
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem,
+            criado_em,
+            atualizado_em
+        FROM itens_catalogo
+        WHERE
+            nome_mercado LIKE :termo
+            OR nome_exibicao LIKE :termo
+        ORDER BY
+            nome_exibicao ASC,
+            id ASC
+        LIMIT :limite
+        OFFSET :deslocamento
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "termo": f"%{termo_normalizado}%",
+            "limite": limite,
+            "deslocamento": deslocamento,
+        },
+    )
+
+    return [
+        dict(registro._mapping)
+        for registro in resultado
+    ]
 
 def listar_itens_catalogo(
     conexao: Connection,
