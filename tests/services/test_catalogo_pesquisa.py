@@ -6,7 +6,12 @@ import pytest
 
 from skinexa.dto.catalogo.item import ItemCatalogoDTO
 
+from skinexa.dto.catalogo.autocomplete import (
+    SugestaoItemCatalogoDTO,
+)
+
 from skinexa.services.catalogo.pesquisa import (
+    autocomplete_itens,
     pesquisar_item_por_identificador,
     pesquisar_itens_globalmente,
     pesquisar_itens_por_nome,  
@@ -412,3 +417,129 @@ def test_pesquisar_itens_globalmente_com_limite_invalido():
             termo="Redline",
             limite=0,
         )
+        
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "buscar_sugestoes_itens_catalogo",
+)
+
+def test_autocomplete_itens(
+    mock_buscar_sugestoes,
+):
+    """Testa sugestões de itens para autocomplete."""
+
+    conexao = Mock()
+
+    mock_buscar_sugestoes.return_value = [
+        {
+            "id": 1,
+            "nome_mercado": (
+                "AK-47 | Redline (Field-Tested)"
+            ),
+            "nome_exibicao": "AK-47 | Redline",
+            "tipo_item": "skin",
+            "url_icone": "icone-1",
+        },
+        {
+            "id": 2,
+            "nome_mercado": (
+                "AK-47 | Redline (Minimal Wear)"
+            ),
+            "nome_exibicao": "AK-47 | Redline",
+            "tipo_item": "skin",
+            "url_icone": "icone-2",
+        },
+    ]
+
+    resultado = autocomplete_itens(
+        conexao,
+        termo="Redline",
+        limite=8,
+    )
+
+    assert len(resultado) == 2
+
+    assert all(
+        isinstance(
+            item,
+            SugestaoItemCatalogoDTO,
+        )
+        for item in resultado
+    )
+
+    assert resultado[0].id == 1
+    assert resultado[0].nome_mercado == (
+        "AK-47 | Redline (Field-Tested)"
+    )
+    assert resultado[0].nome_exibicao == (
+        "AK-47 | Redline"
+    )
+    assert resultado[0].tipo_item == "skin"
+    assert resultado[0].url_icone == "icone-1"
+
+    assert resultado[1].id == 2
+
+    mock_buscar_sugestoes.assert_called_once_with(
+        conexao,
+        termo="Redline",
+        limite=8,
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "buscar_sugestoes_itens_catalogo",
+)
+
+def test_autocomplete_itens_sem_resultados(
+    mock_buscar_sugestoes,
+):
+    """Testa autocomplete sem sugestões."""
+
+    conexao = Mock()
+
+    mock_buscar_sugestoes.return_value = []
+
+    resultado = autocomplete_itens(
+        conexao,
+        termo="Inexistente",
+    )
+
+    assert resultado == []
+
+    mock_buscar_sugestoes.assert_called_once_with(
+        conexao,
+        termo="Inexistente",
+        limite=10,
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "buscar_sugestoes_itens_catalogo",
+)
+
+def test_autocomplete_itens_sem_icone(
+    mock_buscar_sugestoes,
+):
+    """Testa sugestão sem URL de ícone."""
+
+    conexao = Mock()
+
+    mock_buscar_sugestoes.return_value = [
+        {
+            "id": 1,
+            "nome_mercado": (
+                "AK-47 | Redline (Field-Tested)"
+            ),
+            "nome_exibicao": "AK-47 | Redline",
+            "tipo_item": "skin",
+            "url_icone": None,
+        }
+    ]
+
+    resultado = autocomplete_itens(
+        conexao,
+        termo="Redline",
+    )
+
+    assert len(resultado) == 1
+    assert resultado[0].url_icone is None
