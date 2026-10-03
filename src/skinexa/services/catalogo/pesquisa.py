@@ -3,10 +3,17 @@
 from sqlalchemy.engine import Connection
 
 from skinexa.database.queries.itens_catalogo import (
+    buscar_sugestoes_itens_catalogo,
     pesquisar_itens_catalogo_por_nome,
 )
 
-from skinexa.dto.catalogo.item import ItemCatalogoDTO
+from skinexa.dto.catalogo.autocomplete import (
+    SugestaoItemCatalogoDTO,
+)
+
+from skinexa.dto.catalogo.item import (
+    ItemCatalogoDTO
+)
 
 from skinexa.services.catalogo.service import (
     converter_item_catalogo,
@@ -99,3 +106,34 @@ def pesquisar_itens_globalmente(
             break
 
     return itens       
+
+def autocomplete_itens(
+    conexao: Connection,
+    *,
+    termo: str,
+    limite: int = 10,
+) -> list[SugestaoItemCatalogoDTO]:
+    """Obtém sugestões de itens para autocomplete."""
+
+    registros = buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo=termo,
+        limite=limite,
+    )
+
+    return [
+        SugestaoItemCatalogoDTO(
+            id=int(registro["id"]),
+            nome_mercado=str(
+                registro["nome_mercado"]
+            ),
+            nome_exibicao=str(
+                registro["nome_exibicao"]
+            ),
+            tipo_item=str(
+                registro["tipo_item"]
+            ),
+            url_icone=registro["url_icone"],
+        )
+        for registro in registros
+    ]
