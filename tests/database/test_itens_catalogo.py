@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import Mock
 
 from skinexa.database.queries.itens_catalogo import (
+    buscar_sugestoes_itens_catalogo,
     contar_itens_catalogo,
     listar_itens_catalogo,
     obter_item_catalogo_por_id,
@@ -560,6 +561,146 @@ def test_pesquisar_itens_catalogo_por_nome_com_deslocamento_invalido():
             termo="Redline",
             limite=20,
             deslocamento=-1,
+        )
+
+    conexao.execute.assert_not_called()
+    
+def test_buscar_sugestoes_itens_catalogo():
+    """Testa a busca de sugestões para autocomplete."""
+
+    conexao = Mock()
+
+    registro_1 = Mock()
+    registro_1._mapping = {
+        "id": 1,
+        "nome_mercado": (
+            "AK-47 | Redline (Field-Tested)"
+        ),
+        "nome_exibicao": "AK-47 | Redline",
+        "tipo_item": "skin",
+        "url_icone": "icone-1",
+    }
+
+    registro_2 = Mock()
+    registro_2._mapping = {
+        "id": 2,
+        "nome_mercado": (
+            "AK-47 | Redline (Minimal Wear)"
+        ),
+        "nome_exibicao": "AK-47 | Redline",
+        "tipo_item": "skin",
+        "url_icone": "icone-2",
+    }
+
+    conexao.execute.return_value = [
+        registro_1,
+        registro_2,
+    ]
+
+    resultado = buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo="Redline",
+    )
+
+    assert resultado == [
+        registro_1._mapping,
+        registro_2._mapping,
+    ]
+
+    conexao.execute.assert_called_once()
+    
+def test_buscar_sugestoes_itens_catalogo_envia_parametros():
+    """Testa os parâmetros enviados ao autocomplete."""
+
+    conexao = Mock()
+    conexao.execute.return_value = []
+
+    buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo="Redline",
+        limite=8,
+    )
+
+    parametros = conexao.execute.call_args.args[1]
+
+    assert parametros == {
+        "termo": "%Redline%",
+        "prefixo": "Redline%",
+        "limite": 8,
+    }
+    
+def test_buscar_sugestoes_itens_catalogo_remove_espacos():
+    """Testa a normalização do termo do autocomplete."""
+
+    conexao = Mock()
+    conexao.execute.return_value = []
+
+    buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo="  Redline  ",
+    )
+
+    parametros = conexao.execute.call_args.args[1]
+
+    assert parametros["termo"] == "%Redline%"
+    assert parametros["prefixo"] == "Redline%"
+    
+def test_buscar_sugestoes_itens_catalogo_com_termo_curto():
+    """Não pesquisa quando o termo possui menos de dois caracteres."""
+
+    conexao = Mock()
+
+    resultado = buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo="R",
+    )
+
+    assert resultado == []
+
+    conexao.execute.assert_not_called()
+    
+def test_buscar_sugestoes_itens_catalogo_com_termo_vazio():
+    """Não pesquisa quando o termo está vazio."""
+
+    conexao = Mock()
+
+    resultado = buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo="   ",
+    )
+
+    assert resultado == []
+
+    conexao.execute.assert_not_called()
+    
+def test_buscar_sugestoes_itens_catalogo_sem_resultados():
+    """Testa autocomplete sem sugestões."""
+
+    conexao = Mock()
+    conexao.execute.return_value = []
+
+    resultado = buscar_sugestoes_itens_catalogo(
+        conexao,
+        termo="Inexistente",
+    )
+
+    assert resultado == []
+
+    conexao.execute.assert_called_once()
+    
+def test_buscar_sugestoes_itens_catalogo_com_limite_invalido():
+    """Testa autocomplete com limite inválido."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="O limite deve ser maior que zero.",
+    ):
+        buscar_sugestoes_itens_catalogo(
+            conexao,
+            termo="Redline",
+            limite=0,
         )
 
     conexao.execute.assert_not_called()
