@@ -347,3 +347,59 @@ def contar_itens_catalogo(
     ).scalar_one()
 
     return int(resultado)
+
+def buscar_sugestoes_itens_catalogo(
+    conexao: Connection,
+    *,
+    termo: str,
+    limite: int = 10,
+) -> list[dict[str, Any]]:
+    """Busca sugestões de itens para autocomplete."""
+
+    termo_normalizado = termo.strip()
+
+    if len(termo_normalizado) < 2:
+        return []
+
+    if limite < 1:
+        raise ValueError(
+            "O limite deve ser maior que zero."
+        )
+
+    consulta = text(
+        """
+        SELECT
+            id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            url_icone
+        FROM itens_catalogo
+        WHERE
+            nome_mercado LIKE :termo
+            OR nome_exibicao LIKE :termo
+        ORDER BY
+            CASE
+                WHEN nome_exibicao LIKE :prefixo THEN 0
+                WHEN nome_mercado LIKE :prefixo THEN 1
+                ELSE 2
+            END,
+            nome_exibicao ASC,
+            id ASC
+        LIMIT :limite
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "termo": f"%{termo_normalizado}%",
+            "prefixo": f"{termo_normalizado}%",
+            "limite": limite,
+        },
+    )
+
+    return [
+        dict(registro._mapping)
+        for registro in resultado
+    ]
