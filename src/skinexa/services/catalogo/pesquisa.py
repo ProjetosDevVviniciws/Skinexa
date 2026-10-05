@@ -4,6 +4,7 @@ from sqlalchemy.engine import Connection
 
 from skinexa.database.queries.itens_catalogo import (
     buscar_sugestoes_itens_catalogo,
+    filtrar_itens_catalogo,
     pesquisar_itens_catalogo_por_nome,
 )
 
@@ -135,5 +136,40 @@ def autocomplete_itens(
             ),
             url_icone=registro["url_icone"],
         )
+        for registro in registros
+    ]
+    
+def filtrar_itens(
+    conexao: Connection,
+    *,
+    tipo_item: str | None = None,
+    nome_arma: str | None = None,
+    nome_acabamento: str | None = None,
+    estado_exterior: str | None = None,
+    raridade: str | None = None,
+    colecao: str | None = None,
+    variante_stattrak: bool | None = None,
+    variante_souvenir: bool | None = None,
+    limite: int = 20,
+    deslocamento: int = 0,
+) -> list[ItemCatalogoDTO]:
+    """Filtra itens do catálogo por características."""
+
+    registros = filtrar_itens_catalogo(
+        conexao,
+        tipo_item=tipo_item,
+        nome_arma=nome_arma,
+        nome_acabamento=nome_acabamento,
+        estado_exterior=estado_exterior,
+        raridade=raridade,
+        colecao=colecao,
+        variante_stattrak=variante_stattrak,
+        variante_souvenir=variante_souvenir,
+        limite=limite,
+        deslocamento=deslocamento,
+    )
+
+    return [
+        converter_item_catalogo(registro)
         for registro in registros
     ]
