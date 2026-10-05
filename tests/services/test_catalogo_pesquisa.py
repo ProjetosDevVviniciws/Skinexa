@@ -12,6 +12,7 @@ from skinexa.dto.catalogo.autocomplete import (
 
 from skinexa.services.catalogo.pesquisa import (
     autocomplete_itens,
+    filtrar_itens,
     pesquisar_item_por_identificador,
     pesquisar_itens_globalmente,
     pesquisar_itens_por_nome,  
@@ -543,3 +544,166 @@ def test_autocomplete_itens_sem_icone(
 
     assert len(resultado) == 1
     assert resultado[0].url_icone is None
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "filtrar_itens_catalogo",
+)
+
+def test_filtrar_itens(
+    mock_filtrar_itens,
+):
+    """Testa filtragem de itens do catálogo."""
+
+    conexao = Mock()
+
+    mock_filtrar_itens.return_value = [
+        _criar_registro_item(
+            item_id=1,
+        ),
+        _criar_registro_item(
+            item_id=2,
+            nome_mercado=(
+                "AK-47 | Redline (Minimal Wear)"
+            ),
+        ),
+    ]
+
+    resultado = filtrar_itens(
+        conexao,
+        tipo_item="skin",
+        nome_arma="AK-47",
+        nome_acabamento="Redline",
+        raridade="Classified",
+        colecao="The Phoenix Collection",
+        variante_stattrak=False,
+        limite=25,
+        deslocamento=50,
+    )
+
+    assert len(resultado) == 2
+
+    assert all(
+        isinstance(item, ItemCatalogoDTO)
+        for item in resultado
+    )
+
+    assert resultado[0].id == 1
+    assert resultado[1].id == 2
+
+    mock_filtrar_itens.assert_called_once_with(
+        conexao,
+        tipo_item="skin",
+        nome_arma="AK-47",
+        nome_acabamento="Redline",
+        estado_exterior=None,
+        raridade="Classified",
+        colecao="The Phoenix Collection",
+        variante_stattrak=False,
+        variante_souvenir=None,
+        limite=25,
+        deslocamento=50,
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "filtrar_itens_catalogo",
+)
+
+def test_filtrar_itens_sem_resultados(
+    mock_filtrar_itens,
+):
+    """Testa filtragem sem itens encontrados."""
+
+    conexao = Mock()
+
+    mock_filtrar_itens.return_value = []
+
+    resultado = filtrar_itens(
+        conexao,
+        tipo_item="luva",
+    )
+
+    assert resultado == []
+
+    mock_filtrar_itens.assert_called_once_with(
+        conexao,
+        tipo_item="luva",
+        nome_arma=None,
+        nome_acabamento=None,
+        estado_exterior=None,
+        raridade=None,
+        colecao=None,
+        variante_stattrak=None,
+        variante_souvenir=None,
+        limite=20,
+        deslocamento=0,
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "filtrar_itens_catalogo",
+)
+
+def test_filtrar_itens_sem_filtros(
+    mock_filtrar_itens,
+):
+    """Testa filtragem sem filtros específicos."""
+
+    conexao = Mock()
+
+    mock_filtrar_itens.return_value = []
+
+    resultado = filtrar_itens(
+        conexao,
+    )
+
+    assert resultado == []
+
+    mock_filtrar_itens.assert_called_once_with(
+        conexao,
+        tipo_item=None,
+        nome_arma=None,
+        nome_acabamento=None,
+        estado_exterior=None,
+        raridade=None,
+        colecao=None,
+        variante_stattrak=None,
+        variante_souvenir=None,
+        limite=20,
+        deslocamento=0,
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "filtrar_itens_catalogo",
+)
+
+def test_filtrar_itens_sem_filtros(
+    mock_filtrar_itens,
+):
+    """Testa filtragem sem filtros específicos."""
+
+    conexao = Mock()
+
+    mock_filtrar_itens.return_value = []
+
+    resultado = filtrar_itens(
+        conexao,
+    )
+
+    assert resultado == []
+
+    mock_filtrar_itens.assert_called_once_with(
+        conexao,
+        tipo_item=None,
+        nome_arma=None,
+        nome_acabamento=None,
+        estado_exterior=None,
+        raridade=None,
+        colecao=None,
+        variante_stattrak=None,
+        variante_souvenir=None,
+        limite=20,
+        deslocamento=0,
+    )
