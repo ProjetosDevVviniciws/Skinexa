@@ -10,6 +10,7 @@ from skinexa.database.queries.itens_catalogo import (
     obter_item_catalogo_por_nome_mercado,
     obter_itens_catalogo_ids_por_nomes_mercado,
     pesquisar_itens_catalogo_por_nome,
+    filtrar_itens_catalogo,
 )
 
 def criar_registro_item_catalogo(
@@ -704,3 +705,176 @@ def test_buscar_sugestoes_itens_catalogo_com_limite_invalido():
         )
 
     conexao.execute.assert_not_called()
+    
+def test_filtrar_itens_catalogo_sem_filtros():
+    """Testa listagem quando nenhum filtro é informado."""
+
+    conexao = Mock()
+
+    registro = criar_registro_item_catalogo()
+
+    conexao.execute.return_value = [
+        registro,
+    ]
+
+    resultado = filtrar_itens_catalogo(
+        conexao,
+    )
+
+    assert resultado == [
+        registro._mapping,
+    ]
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros == {
+        "limite": 20,
+        "deslocamento": 0,
+    }
+    
+def test_filtrar_itens_catalogo_com_filtros():
+    """Testa filtros combinados do catálogo."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    filtrar_itens_catalogo(
+        conexao,
+        tipo_item="skin",
+        nome_arma="AK-47",
+        nome_acabamento="Redline",
+        estado_exterior="Field-Tested",
+        raridade="Classified",
+        colecao="The Phoenix Collection",
+        variante_stattrak=True,
+        variante_souvenir=False,
+        limite=25,
+        deslocamento=50,
+    )
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros == {
+        "tipo_item": "skin",
+        "nome_arma": "AK-47",
+        "nome_acabamento": "Redline",
+        "estado_exterior": "Field-Tested",
+        "raridade": "Classified",
+        "colecao": "The Phoenix Collection",
+        "variante_stattrak": True,
+        "variante_souvenir": False,
+        "limite": 25,
+        "deslocamento": 50,
+    }
+    
+def test_filtrar_itens_catalogo_remove_espacos():
+    """Testa normalização dos filtros textuais."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    filtrar_itens_catalogo(
+        conexao,
+        tipo_item="  skin  ",
+        nome_arma="  AK-47  ",
+        nome_acabamento="  Redline  ",
+        estado_exterior="  Field-Tested  ",
+        raridade="  Classified  ",
+        colecao="  The Phoenix Collection  ",
+    )
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros["tipo_item"] == "skin"
+    assert parametros["nome_arma"] == "AK-47"
+    assert parametros["estado_exterior"] == (
+        "Field-Tested"
+    )
+    assert parametros["raridade"] == (
+        "Classified"
+    )
+    assert parametros["nome_acabamento"] == "Redline"
+    assert parametros["colecao"] == (
+        "The Phoenix Collection"
+    )
+    
+def test_filtrar_itens_catalogo_ignora_filtros_vazios():
+    """Ignora filtros textuais contendo apenas espaços."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    filtrar_itens_catalogo(
+        conexao,
+        tipo_item="   ",
+        nome_arma="   ",
+        nome_acabamento="   ",
+        estado_exterior="   ",
+        raridade="   ",
+        colecao="   ",
+    )
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros == {
+        "limite": 20,
+        "deslocamento": 0,
+    }
+    
+def test_filtrar_itens_catalogo_com_limite_invalido():
+    """Testa filtro com limite inválido."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="O limite deve ser maior que zero.",
+    ):
+        filtrar_itens_catalogo(
+            conexao,
+            limite=0,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_filtrar_itens_catalogo_com_deslocamento_invalido():
+    """Testa filtro com deslocamento inválido."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="O deslocamento não pode ser negativo.",
+    ):
+        filtrar_itens_catalogo(
+            conexao,
+            deslocamento=-1,
+        )
+
+    conexao.execute.assert_not_called()
+    
+def test_filtrar_itens_catalogo_preserva_filtros_booleanos_false():
+    """Testa filtros booleanos definidos explicitamente como False."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    filtrar_itens_catalogo(
+        conexao,
+        variante_stattrak=False,
+        variante_souvenir=False,
+    )
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros["variante_stattrak"] is False
+    assert parametros["variante_souvenir"] is False
