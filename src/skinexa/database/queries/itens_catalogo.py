@@ -403,3 +403,178 @@ def buscar_sugestoes_itens_catalogo(
         dict(registro._mapping)
         for registro in resultado
     ]
+     
+def filtrar_itens_catalogo(
+    conexao: Connection,
+    *,
+    tipo_item: str | None = None,
+    nome_arma: str | None = None,
+    nome_acabamento: str | None = None,
+    estado_exterior: str | None = None,
+    raridade: str | None = None,
+    colecao: str | None = None,
+    variante_stattrak: bool | None = None,
+    variante_souvenir: bool | None = None,
+    limite: int = 20,
+    deslocamento: int = 0,
+) -> list[dict[str, Any]]:
+    """Filtra itens do catálogo por características."""
+
+    if limite < 1:
+        raise ValueError(
+            "O limite deve ser maior que zero."
+        )
+
+    if deslocamento < 0:
+        raise ValueError(
+            "O deslocamento não pode ser negativo."
+        )
+
+    filtros = []
+    parametros: dict[str, Any] = {
+        "limite": limite,
+        "deslocamento": deslocamento,
+    }
+
+    if tipo_item is not None:
+        tipo_item_normalizado = tipo_item.strip()
+
+        if tipo_item_normalizado:
+            filtros.append(
+                "tipo_item = :tipo_item"
+            )
+            parametros["tipo_item"] = (
+                tipo_item_normalizado
+            )
+
+    if nome_arma is not None:
+        nome_arma_normalizado = nome_arma.strip()
+
+        if nome_arma_normalizado:
+            filtros.append(
+                "nome_arma = :nome_arma"
+            )
+            parametros["nome_arma"] = (
+                nome_arma_normalizado
+            )
+
+    if nome_acabamento is not None:
+        nome_acabamento_normalizado = (
+            nome_acabamento.strip()
+        )
+
+        if nome_acabamento_normalizado:
+            filtros.append(
+                "nome_acabamento = :nome_acabamento"
+            )
+            parametros["nome_acabamento"] = (
+                nome_acabamento_normalizado
+            )
+    
+    if estado_exterior is not None:
+        estado_exterior_normalizado = (
+            estado_exterior.strip()
+        )
+
+        if estado_exterior_normalizado:
+            filtros.append(
+                "estado_exterior = :estado_exterior"
+            )
+            parametros["estado_exterior"] = (
+                estado_exterior_normalizado
+            )
+
+    if raridade is not None:
+        raridade_normalizada = raridade.strip()
+
+        if raridade_normalizada:
+            filtros.append(
+                "raridade = :raridade"
+            )
+            parametros["raridade"] = (
+                raridade_normalizada
+            )
+
+    if colecao is not None:
+        colecao_normalizada = colecao.strip()
+
+        if colecao_normalizada:
+            filtros.append(
+                "colecao = :colecao"
+            )
+            parametros["colecao"] = (
+                colecao_normalizada
+            )
+    
+    if variante_stattrak is not None:
+        filtros.append(
+            "variante_stattrak = :variante_stattrak"
+        )
+        parametros["variante_stattrak"] = (
+            variante_stattrak
+        )
+
+    if variante_souvenir is not None:
+        filtros.append(
+            "variante_souvenir = :variante_souvenir"
+        )
+        parametros["variante_souvenir"] = (
+            variante_souvenir
+        )
+
+    clausula_where = ""
+
+    if filtros:
+        clausula_where = (
+            "WHERE " + " AND ".join(filtros)
+        )
+
+    consulta = text(
+        f"""
+        SELECT
+            id,
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem,
+            criado_em,
+            atualizado_em
+        FROM itens_catalogo
+        {clausula_where}
+        ORDER BY
+            nome_exibicao ASC,
+            id ASC
+        LIMIT :limite
+        OFFSET :deslocamento
+        """
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        parametros,
+    )
+
+    return [
+        dict(registro._mapping)
+        for registro in resultado
+    ]
