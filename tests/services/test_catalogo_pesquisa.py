@@ -579,6 +579,7 @@ def test_filtrar_itens(
         variante_stattrak=False,
         limite=25,
         deslocamento=50,
+        ordenacao="nome_asc",
     )
 
     assert len(resultado) == 2
@@ -603,6 +604,7 @@ def test_filtrar_itens(
         variante_souvenir=None,
         limite=25,
         deslocamento=50,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -638,6 +640,7 @@ def test_filtrar_itens_sem_resultados(
         variante_souvenir=None,
         limite=20,
         deslocamento=0,
+        ordenacao="nome_asc",
     )
     
 @patch(
@@ -672,38 +675,5 @@ def test_filtrar_itens_sem_filtros(
         variante_souvenir=None,
         limite=20,
         deslocamento=0,
-    )
-    
-@patch(
-    "skinexa.services.catalogo.pesquisa."
-    "filtrar_itens_catalogo",
-)
-
-def test_filtrar_itens_sem_filtros(
-    mock_filtrar_itens,
-):
-    """Testa filtragem sem filtros específicos."""
-
-    conexao = Mock()
-
-    mock_filtrar_itens.return_value = []
-
-    resultado = filtrar_itens(
-        conexao,
-    )
-
-    assert resultado == []
-
-    mock_filtrar_itens.assert_called_once_with(
-        conexao,
-        tipo_item=None,
-        nome_arma=None,
-        nome_acabamento=None,
-        estado_exterior=None,
-        raridade=None,
-        colecao=None,
-        variante_stattrak=None,
-        variante_souvenir=None,
-        limite=20,
-        deslocamento=0,
+        ordenacao="nome_asc",
     )
