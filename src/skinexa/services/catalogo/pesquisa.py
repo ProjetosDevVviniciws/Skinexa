@@ -152,6 +152,7 @@ def filtrar_itens(
     variante_souvenir: bool | None = None,
     limite: int = 20,
     deslocamento: int = 0,
+    ordenacao: str = "nome_asc",
 ) -> list[ItemCatalogoDTO]:
     """Filtra itens do catálogo por características."""
 
@@ -167,6 +168,7 @@ def filtrar_itens(
         variante_souvenir=variante_souvenir,
         limite=limite,
         deslocamento=deslocamento,
+        ordenacao=ordenacao,
     )
 
     return [
