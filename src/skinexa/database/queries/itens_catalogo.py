@@ -6,6 +6,25 @@ from sqlalchemy import bindparam, text
 
 from sqlalchemy.engine import Connection
 
+ORDENACOES_CATALOGO = {
+    "nome_asc": "nome_exibicao ASC, id ASC",
+    "nome_desc": "nome_exibicao DESC, id DESC",
+    "mais_recentes": "criado_em DESC, id DESC",
+    "mais_antigos": "criado_em ASC, id ASC",
+}
+
+def _obter_ordenacao_catalogo(
+    ordenacao: str,
+) -> str:
+    """Obtém a cláusula de ordenação permitida do catálogo."""
+
+    try:
+        return ORDENACOES_CATALOGO[ordenacao]
+    except KeyError as erro:
+        raise ValueError(
+            "Ordenação de catálogo inválida."
+        ) from erro
+
 def obter_item_catalogo_por_id(
     conexao: Connection,
     item_catalogo_id: int,
@@ -265,6 +284,7 @@ def listar_itens_catalogo(
     *,
     limite: int,
     deslocamento: int,
+    ordenacao: str = "nome_asc",
 ) -> list[dict[str, Any]]:
     """Lista itens do catálogo com paginação."""
 
@@ -278,8 +298,14 @@ def listar_itens_catalogo(
             "O deslocamento não pode ser negativo."
         )
 
+    clausula_ordenacao = (
+        _obter_ordenacao_catalogo(
+            ordenacao,
+        )
+    )
+    
     consulta = text(
-        """
+        f"""
         SELECT
             id,
             app_id,
@@ -309,9 +335,7 @@ def listar_itens_catalogo(
             criado_em,
             atualizado_em
         FROM itens_catalogo
-        ORDER BY
-            nome_exibicao ASC,
-            id ASC
+        ORDER BY {clausula_ordenacao}
         LIMIT :limite
         OFFSET :deslocamento
         """
@@ -417,6 +441,7 @@ def filtrar_itens_catalogo(
     variante_souvenir: bool | None = None,
     limite: int = 20,
     deslocamento: int = 0,
+    ordenacao: str = "nome_asc",
 ) -> list[dict[str, Any]]:
     """Filtra itens do catálogo por características."""
 
@@ -435,6 +460,12 @@ def filtrar_itens_catalogo(
         "limite": limite,
         "deslocamento": deslocamento,
     }
+
+    clausula_ordenacao = (
+        _obter_ordenacao_catalogo(
+            ordenacao,
+        )
+    )
 
     if tipo_item is not None:
         tipo_item_normalizado = tipo_item.strip()
@@ -561,9 +592,7 @@ def filtrar_itens_catalogo(
             atualizado_em
         FROM itens_catalogo
         {clausula_where}
-        ORDER BY
-            nome_exibicao ASC,
-            id ASC
+        ORDER BY {clausula_ordenacao}
         LIMIT :limite
         OFFSET :deslocamento
         """
