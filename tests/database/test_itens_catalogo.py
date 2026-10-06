@@ -9,6 +9,7 @@ from skinexa.database.queries.itens_catalogo import (
     obter_item_catalogo_por_id,
     obter_item_catalogo_por_nome_mercado,
     obter_itens_catalogo_ids_por_nomes_mercado,
+    _obter_ordenacao_catalogo,
     pesquisar_itens_catalogo_por_nome,
     filtrar_itens_catalogo,
 )
@@ -878,3 +879,109 @@ def test_filtrar_itens_catalogo_preserva_filtros_booleanos_false():
 
     assert parametros["variante_stattrak"] is False
     assert parametros["variante_souvenir"] is False
+    
+def test_obter_ordenacao_catalogo():
+    """Testa as ordenações permitidas do catálogo."""
+
+    assert (
+        _obter_ordenacao_catalogo("nome_asc")
+        == "nome_exibicao ASC, id ASC"
+    )
+
+    assert (
+        _obter_ordenacao_catalogo("nome_desc")
+        == "nome_exibicao DESC, id DESC"
+    )
+
+    assert (
+        _obter_ordenacao_catalogo("mais_recentes")
+        == "criado_em DESC, id DESC"
+    )
+
+    assert (
+        _obter_ordenacao_catalogo("mais_antigos")
+        == "criado_em ASC, id ASC"
+    )
+    
+def test_obter_ordenacao_catalogo_invalida():
+    """Rejeita uma ordenação não permitida."""
+
+    with pytest.raises(
+        ValueError,
+        match="Ordenação de catálogo inválida.",
+    ):
+        _obter_ordenacao_catalogo(
+            "DROP TABLE itens_catalogo",
+        )
+        
+def test_listar_itens_catalogo_com_ordenacao():
+    """Testa ordenação configurável da listagem."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    listar_itens_catalogo(
+        conexao,
+        limite=20,
+        deslocamento=0,
+        ordenacao="mais_recentes",
+    )
+
+    argumentos = conexao.execute.call_args
+
+    consulta = str(
+        argumentos.args[0]
+    )
+
+    parametros = argumentos.args[1]
+
+    assert "criado_em DESC, id DESC" in consulta
+
+    assert parametros == {
+        "limite": 20,
+        "deslocamento": 0,
+    }
+    
+def test_filtrar_itens_catalogo_com_ordenacao():
+    """Testa ordenação na filtragem do catálogo."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    filtrar_itens_catalogo(
+        conexao,
+        tipo_item="skin",
+        ordenacao="nome_desc",
+    )
+
+    consulta = str(
+        conexao.execute.call_args.args[0]
+    )
+
+    parametros = (
+        conexao.execute.call_args.args[1]
+    )
+
+    assert "nome_exibicao DESC, id DESC" in consulta
+    assert parametros["tipo_item"] == "skin"
+    
+def test_listar_itens_catalogo_com_ordenacao_padrao():
+    """Testa ordenação padrão da listagem."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value = []
+
+    listar_itens_catalogo(
+        conexao,
+        limite=20,
+        deslocamento=0,
+    )
+
+    consulta = str(
+        conexao.execute.call_args.args[0]
+    )
+
+    assert "nome_exibicao ASC, id ASC" in consulta
