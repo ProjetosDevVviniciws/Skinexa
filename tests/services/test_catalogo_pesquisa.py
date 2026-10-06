@@ -4,15 +4,22 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from skinexa.dto.catalogo.item import ItemCatalogoDTO
+from skinexa.dto.catalogo.item import (
+    ItemCatalogoDTO,
+)
 
 from skinexa.dto.catalogo.autocomplete import (
     SugestaoItemCatalogoDTO,
 )
 
+from skinexa.dto.catalogo.paginacao import (
+    PaginaItensCatalogoDTO,
+)
+
 from skinexa.services.catalogo.pesquisa import (
     autocomplete_itens,
     filtrar_itens,
+    listar_itens_paginados,
     pesquisar_item_por_identificador,
     pesquisar_itens_globalmente,
     pesquisar_itens_por_nome,  
@@ -675,5 +682,256 @@ def test_filtrar_itens_sem_filtros(
         variante_souvenir=None,
         limite=20,
         deslocamento=0,
+        ordenacao="nome_asc",
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "listar_itens_catalogo",
+)
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "contar_itens_catalogo",
+)
+
+def test_listar_itens_paginados(
+    mock_contar_itens,
+    mock_listar_itens,
+):
+    """Testa listagem paginada do catálogo."""
+
+    conexao = Mock()
+
+    mock_contar_itens.return_value = 45
+
+    mock_listar_itens.return_value = [
+        _criar_registro_item(
+            item_id=1,
+        ),
+        _criar_registro_item(
+            item_id=2,
+        ),
+    ]
+
+    resultado = listar_itens_paginados(
+        conexao,
+        pagina=1,
+        por_pagina=20,
+        ordenacao="nome_asc",
+    )
+
+    assert isinstance(
+        resultado,
+        PaginaItensCatalogoDTO,
+    )
+
+    assert len(resultado.itens) == 2
+    assert resultado.pagina == 1
+    assert resultado.por_pagina == 20
+    assert resultado.total_itens == 45
+    assert resultado.total_paginas == 3
+    assert resultado.tem_anterior is False
+    assert resultado.tem_proxima is True
+
+    mock_contar_itens.assert_called_once_with(
+        conexao,
+    )
+
+    mock_listar_itens.assert_called_once_with(
+        conexao,
+        limite=20,
+        deslocamento=0,
+        ordenacao="nome_asc",
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "listar_itens_catalogo",
+)
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "contar_itens_catalogo",
+)
+
+def test_listar_itens_paginados_pagina_intermediaria(
+    mock_contar_itens,
+    mock_listar_itens,
+):
+    """Testa cálculo do deslocamento da paginação."""
+
+    conexao = Mock()
+
+    mock_contar_itens.return_value = 100
+    mock_listar_itens.return_value = []
+
+    resultado = listar_itens_paginados(
+        conexao,
+        pagina=3,
+        por_pagina=20,
+        ordenacao="mais_recentes",
+    )
+
+    assert resultado.pagina == 3
+    assert resultado.total_paginas == 5
+    assert resultado.tem_anterior is True
+    assert resultado.tem_proxima is True
+
+    mock_listar_itens.assert_called_once_with(
+        conexao,
+        limite=20,
+        deslocamento=40,
+        ordenacao="mais_recentes",
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "listar_itens_catalogo",
+)
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "contar_itens_catalogo",
+)
+
+def test_listar_itens_paginados_ultima_pagina(
+    mock_contar_itens,
+    mock_listar_itens,
+):
+    """Testa última página da listagem."""
+
+    conexao = Mock()
+
+    mock_contar_itens.return_value = 41
+    mock_listar_itens.return_value = []
+
+    resultado = listar_itens_paginados(
+        conexao,
+        pagina=3,
+        por_pagina=20,
+    )
+
+    assert resultado.total_paginas == 3
+    assert resultado.tem_anterior is True
+    assert resultado.tem_proxima is False
+
+    mock_listar_itens.assert_called_once_with(
+        conexao,
+        limite=20,
+        deslocamento=40,
+        ordenacao="nome_asc",
+    )
+    
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "listar_itens_catalogo",
+)
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "contar_itens_catalogo",
+)
+
+def test_listar_itens_paginados_catalogo_vazio(
+    mock_contar_itens,
+    mock_listar_itens,
+):
+    """Testa paginação quando o catálogo está vazio."""
+
+    conexao = Mock()
+
+    mock_contar_itens.return_value = 0
+    mock_listar_itens.return_value = []
+
+    resultado = listar_itens_paginados(
+        conexao,
+    )
+
+    assert resultado.itens == []
+    assert resultado.pagina == 1
+    assert resultado.total_itens == 0
+    assert resultado.total_paginas == 0
+    assert resultado.tem_anterior is False
+    assert resultado.tem_proxima is False
+    
+def test_listar_itens_paginados_com_pagina_invalida():
+    """Rejeita número de página inválido."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="A página deve ser maior que zero.",
+    ):
+        listar_itens_paginados(
+            conexao,
+            pagina=0,
+        )
+        
+def test_listar_itens_paginados_com_por_pagina_invalido():
+    """Rejeita quantidade por página inválida."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "A quantidade por página "
+            "deve ser maior que zero."
+        ),
+    ):
+        listar_itens_paginados(
+            conexao,
+            por_pagina=0,
+        )
+        
+def test_listar_itens_paginados_com_por_pagina_acima_do_limite():
+    """Rejeita quantidade por página acima do limite máximo."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "A quantidade por página "
+            "não pode ser maior que 100."
+        ),
+    ):
+        listar_itens_paginados(
+            conexao,
+            por_pagina=101,
+        )
+        
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "listar_itens_catalogo",
+)
+@patch(
+    "skinexa.services.catalogo.pesquisa."
+    "contar_itens_catalogo",
+)
+
+def test_listar_itens_paginados_aceita_limite_maximo(
+    mock_contar_itens,
+    mock_listar_itens,
+):
+    """Aceita a quantidade máxima permitida por página."""
+
+    conexao = Mock()
+
+    mock_contar_itens.return_value = 250
+    mock_listar_itens.return_value = []
+
+    resultado = listar_itens_paginados(
+        conexao,
+        pagina=2,
+        por_pagina=100,
+    )
+
+    assert resultado.por_pagina == 100
+    assert resultado.total_itens == 250
+    assert resultado.total_paginas == 3
+
+    mock_listar_itens.assert_called_once_with(
+        conexao,
+        limite=100,
+        deslocamento=100,
         ordenacao="nome_asc",
     )
