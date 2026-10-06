@@ -4,7 +4,9 @@ from sqlalchemy.engine import Connection
 
 from skinexa.database.queries.itens_catalogo import (
     buscar_sugestoes_itens_catalogo,
+    contar_itens_catalogo,
     filtrar_itens_catalogo,
+    listar_itens_catalogo,
     pesquisar_itens_catalogo_por_nome,
 )
 
@@ -16,10 +18,16 @@ from skinexa.dto.catalogo.item import (
     ItemCatalogoDTO
 )
 
+from skinexa.dto.catalogo.paginacao import (
+    PaginaItensCatalogoDTO,
+)
+
 from skinexa.services.catalogo.service import (
     converter_item_catalogo,
     obter_item,
 )
+
+LIMITE_MAXIMO_ITENS_POR_PAGINA = 100
 
 def pesquisar_itens_por_nome(
     conexao: Connection,
@@ -175,3 +183,61 @@ def filtrar_itens(
         converter_item_catalogo(registro)
         for registro in registros
     ]
+    
+def listar_itens_paginados(
+    conexao: Connection,
+    *,
+    pagina: int = 1,
+    por_pagina: int = 20,
+    ordenacao: str = "nome_asc",
+) -> PaginaItensCatalogoDTO:
+    """Lista itens do catálogo utilizando paginação."""
+
+    if pagina < 1:
+        raise ValueError(
+            "A página deve ser maior que zero."
+        )
+
+    if por_pagina < 1:
+        raise ValueError(
+            "A quantidade por página deve ser maior que zero."
+        )
+
+    if por_pagina > LIMITE_MAXIMO_ITENS_POR_PAGINA:
+        raise ValueError(
+            "A quantidade por página não pode ser maior que 100."
+        )
+    
+    deslocamento = (
+        pagina - 1
+    ) * por_pagina
+
+    total_itens = contar_itens_catalogo(
+        conexao,
+    )
+
+    total_paginas = (
+        total_itens + por_pagina - 1
+    ) // por_pagina
+
+    registros = listar_itens_catalogo(
+        conexao,
+        limite=por_pagina,
+        deslocamento=deslocamento,
+        ordenacao=ordenacao,
+    )
+
+    itens = [
+        converter_item_catalogo(registro)
+        for registro in registros
+    ]
+
+    return PaginaItensCatalogoDTO(
+        itens=itens,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_itens=total_itens,
+        total_paginas=total_paginas,
+        tem_anterior=pagina > 1,
+        tem_proxima=pagina < total_paginas,
+    )
