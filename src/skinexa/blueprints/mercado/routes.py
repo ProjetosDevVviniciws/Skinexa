@@ -1,8 +1,23 @@
-from flask import Blueprint, render_template, jsonify
+from flask import (
+    Blueprint,
+    jsonify,
+    render_template,
+    request,
+)
 
-from skinexa.services.precos.consulta import consultar_comparacao_precos
+from skinexa.blueprints.mercado.serializers import (
+    serializar_preco_comparacao,
+)
 
-from skinexa.blueprints.mercado.serializers import serializar_preco_comparacao 
+from skinexa.database.connection import engine
+
+from skinexa.services.catalogo.pesquisa import (
+    listar_itens_paginados,
+)
+
+from skinexa.services.precos.consulta import (
+    consultar_comparacao_precos,
+)
 
 mercado_bp = Blueprint(
     "mercado",
@@ -14,8 +29,36 @@ mercado_bp = Blueprint(
 def index():
     """Renderiza a página principal do mercado."""
 
+    pagina = request.args.get(
+        "pagina",
+        default=1,
+        type=int,
+    )
+
+    por_pagina = request.args.get(
+        "por_pagina",
+        default=20,
+        type=int,
+    )
+
+    ordenacao = request.args.get(
+        "ordenacao",
+        default="nome_asc",
+        type=str,
+    )
+
+    with engine.connect() as conexao:
+        resultado = listar_itens_paginados(
+            conexao,
+            pagina=pagina,
+            por_pagina=por_pagina,
+            ordenacao=ordenacao,
+        )
+
     return render_template(
         "mercado/index.html",
+        resultado=resultado,
+        ordenacao=ordenacao,
     )
 
 @mercado_bp.get("/item/<int:item_catalogo_id>")
