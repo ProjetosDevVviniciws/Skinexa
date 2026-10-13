@@ -3,6 +3,14 @@ import pytest
 from unittest.mock import Mock
 
 from skinexa.database.queries.itens_catalogo import (
+    inserir_ou_atualizar_item_catalogo_importacao,
+)
+
+from skinexa.dto.catalogo.importacao import (
+    ItemImportacaoCatalogoDTO,
+)
+
+from skinexa.database.queries.itens_catalogo import (
     buscar_sugestoes_itens_catalogo,
     contar_itens_catalogo,
     listar_itens_catalogo,
@@ -985,3 +993,250 @@ def test_listar_itens_catalogo_com_ordenacao_padrao():
     )
 
     assert "nome_exibicao ASC, id ASC" in consulta
+
+def test_importacao_retorna_id_do_item():
+    """Testa o retorno do identificador interno do item importado."""
+
+    conexao = Mock()
+
+    resultado_execute = Mock()
+    resultado_execute.lastrowid = 35
+
+    conexao.execute.return_value = resultado_execute
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="Rifle",
+        nome_arma="AK-47",
+        nome_acabamento="Redline",
+        estado_exterior="Field-Tested",
+    )
+
+    resultado = inserir_ou_atualizar_item_catalogo_importacao(
+        conexao,
+        item,
+    )
+
+    assert resultado == 35
+
+    conexao.execute.assert_called_once()
+
+def test_importacao_nao_persiste_paint_index_comercial():
+    """Testa que o paint index não é persistido no item comercial."""
+
+    conexao = Mock()
+
+    resultado_execute = Mock()
+    resultado_execute.lastrowid = 35
+
+    conexao.execute.return_value = resultado_execute
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="Rifle",
+        indice_pintura=282,
+    )
+
+    inserir_ou_atualizar_item_catalogo_importacao(
+        conexao,
+        item,
+    )
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros["indice_pintura"] is None
+
+    conexao.execute.assert_called_once()
+
+def test_importacao_rejeita_app_id_invalido():
+    """Testa a rejeição de um item com app_id inválido."""
+
+    conexao = Mock()
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=0,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="Rifle",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="app_id",
+    ):
+        inserir_ou_atualizar_item_catalogo_importacao(
+            conexao,
+            item,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_importacao_rejeita_nome_mercado_vazio():
+    """Testa a rejeição de um item sem nome de mercado válido."""
+
+    conexao = Mock()
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="   ",
+        nome_exibicao="AK-47 | Redline",
+        tipo_item="Rifle",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="nome de mercado",
+    ):
+        inserir_ou_atualizar_item_catalogo_importacao(
+            conexao,
+            item,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_importacao_rejeita_nome_exibicao_vazio():
+    """Testa a rejeição de um item sem nome de exibição válido."""
+
+    conexao = Mock()
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="   ",
+        tipo_item="Rifle",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="nome de exibição",
+    ):
+        inserir_ou_atualizar_item_catalogo_importacao(
+            conexao,
+            item,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_importacao_rejeita_tipo_item_vazio():
+    """Testa a rejeição de um item sem tipo comercial válido."""
+
+    conexao = Mock()
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="   ",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="tipo do item",
+    ):
+        inserir_ou_atualizar_item_catalogo_importacao(
+            conexao,
+            item,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_importacao_rejeita_id_nao_retornado():
+    """Testa a falha quando a persistência não retorna um ID válido."""
+
+    conexao = Mock()
+
+    resultado_execute = Mock()
+    resultado_execute.lastrowid = None
+
+    conexao.execute.return_value = resultado_execute
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="Rifle",
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="ID do item importado",
+    ):
+        inserir_ou_atualizar_item_catalogo_importacao(
+            conexao,
+            item,
+        )
+
+    conexao.execute.assert_called_once()
+
+def test_importacao_serializa_metadados_json():
+    """Testa a serialização dos metadados antes da persistência."""
+
+    conexao = Mock()
+
+    resultado_execute = Mock()
+    resultado_execute.lastrowid = 35
+
+    conexao.execute.return_value = resultado_execute
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="Rifle",
+        metadados_origem={
+            "fonte": "csgo_api",
+            "id_externo": "skin-teste",
+        },
+    )
+
+    inserir_ou_atualizar_item_catalogo_importacao(
+        conexao,
+        item,
+    )
+
+    argumentos = conexao.execute.call_args
+    parametros = argumentos.args[1]
+
+    assert parametros["metadados_origem"] == (
+        '{"fonte": "csgo_api", "id_externo": "skin-teste"}'
+    )
+
+    conexao.execute.assert_called_once()
+    
+def test_importacao_utiliza_upsert_mysql():
+    """Testa a utilização de upsert para evitar itens duplicados."""
+
+    conexao = Mock()
+
+    resultado_execute = Mock()
+    resultado_execute.lastrowid = 35
+
+    conexao.execute.return_value = resultado_execute
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline (Field-Tested)",
+        tipo_item="Rifle",
+    )
+
+    inserir_ou_atualizar_item_catalogo_importacao(
+        conexao,
+        item,
+    )
+
+    argumentos = conexao.execute.call_args
+
+    consulta = str(
+        argumentos.args[0]
+    )
+
+    assert "ON DUPLICATE KEY UPDATE" in consulta
+    assert "LAST_INSERT_ID(id)" in consulta
+
+    conexao.execute.assert_called_once()
