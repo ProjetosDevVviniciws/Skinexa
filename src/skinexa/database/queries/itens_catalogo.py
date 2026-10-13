@@ -6,6 +6,12 @@ from sqlalchemy import bindparam, text
 
 from sqlalchemy.engine import Connection
 
+import json
+
+from skinexa.dto.catalogo.importacao import (
+    ItemImportacaoCatalogoDTO,
+)
+
 ORDENACOES_CATALOGO = {
     "nome_asc": "nome_exibicao ASC, id ASC",
     "nome_desc": "nome_exibicao DESC, id DESC",
@@ -607,3 +613,184 @@ def filtrar_itens_catalogo(
         dict(registro._mapping)
         for registro in resultado
     ]
+    
+def inserir_ou_atualizar_item_catalogo_importacao(
+    conexao: Connection,
+    item: ItemImportacaoCatalogoDTO,
+) -> int:
+    """
+    Insere um item comercial ou preserva o registro existente.
+
+    Retorna o identificador interno do item no catálogo.
+    """
+
+    if item.app_id <= 0:
+        raise ValueError(
+            "O app_id deve ser maior que zero."
+        )
+
+    if not item.nome_mercado.strip():
+        raise ValueError(
+            "O nome de mercado não pode ser vazio."
+        )
+
+    if not item.nome_exibicao.strip():
+        raise ValueError(
+            "O nome de exibição não pode ser vazio."
+        )
+
+    if not item.tipo_item.strip():
+        raise ValueError(
+            "O tipo do item não pode ser vazio."
+        )
+
+    consulta = text(
+        """
+        INSERT INTO itens_catalogo (
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem
+        )
+        VALUES (
+            :app_id,
+            :nome_mercado,
+            :nome_exibicao,
+            :tipo_item,
+            :nome_arma,
+            :nome_acabamento,
+            :estado_exterior,
+            :raridade,
+            :qualidade,
+            :colecao,
+            :descricao,
+            :indice_pintura,
+            :float_minimo,
+            :float_maximo,
+            :variante_stattrak,
+            :variante_souvenir,
+            :comercializavel,
+            :mercadoria_generica,
+            :steam_class_id,
+            :steam_instance_id,
+            :url_icone,
+            :url_icone_grande,
+            :tags,
+            :metadados_origem
+        )
+        ON DUPLICATE KEY UPDATE
+            id = LAST_INSERT_ID(id),
+            nome_arma = COALESCE(
+                nome_arma,
+                VALUES(nome_arma)
+            ),
+            nome_acabamento = COALESCE(
+                nome_acabamento,
+                VALUES(nome_acabamento)
+            ),
+            estado_exterior = COALESCE(
+                estado_exterior,
+                VALUES(estado_exterior)
+            ),
+            raridade = COALESCE(
+                raridade,
+                VALUES(raridade)
+            ),
+            qualidade = COALESCE(
+                qualidade,
+                VALUES(qualidade)
+            ),
+            colecao = COALESCE(
+                colecao,
+                VALUES(colecao)
+            ),
+            descricao = COALESCE(
+                descricao,
+                VALUES(descricao)
+            ),
+            float_minimo = COALESCE(
+                float_minimo,
+                VALUES(float_minimo)
+            ),
+            float_maximo = COALESCE(
+                float_maximo,
+                VALUES(float_maximo)
+            ),
+            url_icone_grande = COALESCE(
+                url_icone_grande,
+                VALUES(url_icone_grande)
+            )
+        """
+    )
+
+    parametros = {
+        "app_id": item.app_id,
+        "nome_mercado": item.nome_mercado,
+        "nome_exibicao": item.nome_exibicao,
+        "tipo_item": item.tipo_item,
+        "nome_arma": item.nome_arma,
+        "nome_acabamento": item.nome_acabamento,
+        "estado_exterior": item.estado_exterior,
+        "raridade": item.raridade,
+        "qualidade": item.qualidade,
+        "colecao": item.colecao,
+        "descricao": item.descricao,
+        "indice_pintura": None,
+        "float_minimo": item.float_minimo,
+        "float_maximo": item.float_maximo,
+        "variante_stattrak": int(item.variante_stattrak),
+        "variante_souvenir": int(item.variante_souvenir),
+        "comercializavel": int(item.comercializavel),
+        "mercadoria_generica": int(item.mercadoria_generica),
+        "steam_class_id": item.steam_class_id,
+        "steam_instance_id": item.steam_instance_id,
+        "url_icone": item.url_icone,
+        "url_icone_grande": item.url_icone_grande,
+        "tags": (
+            json.dumps(item.tags, ensure_ascii=False)
+            if item.tags is not None
+            else None
+        ),
+        "metadados_origem": (
+            json.dumps(
+                item.metadados_origem,
+                ensure_ascii=False,
+            )
+            if item.metadados_origem is not None
+            else None
+        ),
+    }
+
+    resultado = conexao.execute(
+        consulta,
+        parametros,
+    )
+
+    item_catalogo_id = resultado.lastrowid
+
+    if item_catalogo_id is None or item_catalogo_id <= 0:
+        raise RuntimeError(
+            "Não foi possível obter o ID do item importado."
+        )
+
+    return int(item_catalogo_id)
