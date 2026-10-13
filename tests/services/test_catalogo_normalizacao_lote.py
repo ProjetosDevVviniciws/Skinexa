@@ -185,3 +185,127 @@ def test_normalizar_lote_preserva_entrada(
     normalizar_lote_skins_csgo_api(registros)
 
     assert registros == original
+    
+def test_normalizar_lote_preserva_variantes_com_mesmo_nome(
+    registro_skin,
+):
+    """Verifica a preservação de variantes com a mesma chave comercial."""
+
+    segunda_variante = deepcopy(registro_skin)
+
+    segunda_variante["id"] = "skin-teste-1"
+    segunda_variante["paint_index"] = "283"
+
+    relatorio = normalizar_lote_skins_csgo_api(
+        [registro_skin, segunda_variante]
+    )
+
+    assert relatorio.total_recebidos == 2
+    assert relatorio.total_normalizados == 1
+    assert relatorio.total_duplicados == 1
+
+    assert relatorio.total_variantes_normalizadas == 2
+    assert relatorio.total_variantes_duplicadas == 0
+
+    assert len(relatorio.itens) == 1
+    assert len(relatorio.variantes) == 2
+
+    assert [
+        variante.indice_pintura
+        for variante in relatorio.variantes
+    ] == [282, 283]
+
+def test_normalizar_lote_remove_variantes_duplicadas(
+    registro_skin,
+):
+    """Verifica a remoção de variantes com o mesmo identificador externo."""
+
+    duplicado = deepcopy(registro_skin)
+
+    relatorio = normalizar_lote_skins_csgo_api(
+        [registro_skin, duplicado]
+    )
+
+    assert relatorio.total_recebidos == 2
+    assert relatorio.total_normalizados == 1
+    assert relatorio.total_duplicados == 1
+
+    assert relatorio.total_variantes_normalizadas == 1
+    assert relatorio.total_variantes_duplicadas == 1
+
+    assert len(relatorio.variantes) == 1
+
+def test_normalizar_lote_preserva_ordem_variantes(
+    registro_skin,
+):
+    """Verifica a preservação da ordem das variantes normalizadas."""
+
+    segunda_variante = deepcopy(registro_skin)
+    segunda_variante["id"] = "skin-teste-1"
+
+    terceira_variante = deepcopy(registro_skin)
+    terceira_variante["id"] = "skin-teste-2"
+
+    relatorio = normalizar_lote_skins_csgo_api(
+        [
+            registro_skin,
+            segunda_variante,
+            terceira_variante,
+        ]
+    )
+
+    ids_externos = [
+        variante.id_externo
+        for variante in relatorio.variantes
+    ]
+
+    assert ids_externos == [
+        "skin-teste-0",
+        "skin-teste-1",
+        "skin-teste-2",
+    ]
+
+def test_normalizar_lote_rejeita_variante_sem_id(
+    registro_skin,
+):
+    """Verifica a rejeição de registros sem identificador externo."""
+
+    sem_id = deepcopy(registro_skin)
+    sem_id.pop("id")
+
+    relatorio = normalizar_lote_skins_csgo_api(
+        [sem_id]
+    )
+
+    assert relatorio.total_recebidos == 1
+    assert relatorio.total_normalizados == 0
+    assert relatorio.total_variantes_normalizadas == 0
+    assert relatorio.total_rejeitados == 1
+
+    assert "identificador externo" in (
+        relatorio.erros[0].motivo
+    )
+
+def test_normalizar_lote_preserva_associacao_comercial(
+    registro_skin,
+):
+    """Verifica a associação lógica entre a variante e o item comercial."""
+
+    relatorio = normalizar_lote_skins_csgo_api(
+        [registro_skin]
+    )
+
+    item = relatorio.itens[0]
+    variante = relatorio.variantes[0]
+
+    assert variante.app_id == item.app_id
+    assert variante.nome_mercado == item.nome_mercado
+
+def test_normalizar_lote_vazio_sem_variantes():
+    """Verifica a ausência de variantes em um lote vazio."""
+
+    relatorio = normalizar_lote_skins_csgo_api([])
+
+    assert relatorio.total_variantes_normalizadas == 0
+    assert relatorio.total_variantes_duplicadas == 0
+    assert relatorio.variantes == ()
