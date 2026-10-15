@@ -19,6 +19,11 @@ ARQUIVOS_CATALOGO = {
     "grafites": "graffiti.json",
     "musicas": "music_kits.json",
     "colecionaveis": "collectibles.json",
+    "adesivos_encapsulados": "sticker_slabs.json",
+    "chaves": "keys.json",
+    "destaques": "highlights.json",
+    "armas_base": "base_weapons.json",
+    "pets": "pets.json",
 }
 
 class ErroCSGOAPI(Exception):
