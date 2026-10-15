@@ -6,6 +6,8 @@ import sys
 
 from collections import Counter
 
+from dataclasses import replace
+
 from skinexa.integrations.catalogo.csgo_api_client import (
     ErroCSGOAPI,
     buscar_itens_csgo_api,
@@ -165,12 +167,14 @@ def executar_validacao_catalogo(
 
 def executar_importacao_catalogo(
     relatorio: RelatorioNormalizacaoCatalogoDTO,
+    *,
+    tamanho_lote: int = 100,
 ) -> tuple[int, int]:
     """
-    Persiste os itens comerciais e variantes normalizados.
+    Importa itens e variantes em transações independentes.
 
-    Utiliza uma única transação para permitir rollback
-    caso alguma operação de persistência falhe.
+    Cada lote agrupa os itens comerciais e todas as
+    variantes pertencentes a esses itens.
     """
 
     from sqlalchemy import text
@@ -180,6 +184,11 @@ def executar_importacao_catalogo(
     from skinexa.services.catalogo.importacao import (
         importar_lote_catalogo,
     )
+
+    if tamanho_lote <= 0:
+        raise ValueError(
+            "O tamanho do lote deve ser maior que zero."
+        )
 
     if relatorio.total_rejeitados > 0:
         raise ValueError(
@@ -202,39 +211,105 @@ def executar_importacao_catalogo(
         for item in relatorio.itens
     }
 
+    variantes_por_item = {
+        chave: []
+        for chave in chaves_comerciais
+    }
+
     for variante in relatorio.variantes:
         chave = (
             variante.app_id,
             variante.nome_mercado,
         )
 
-        if chave not in chaves_comerciais:
+        if chave not in variantes_por_item:
             raise ValueError(
                 "Variante sem item comercial correspondente."
             )
 
+        variantes_por_item[chave].append(
+            variante
+        )
+
+    total_itens = 0
+    total_variantes = 0
+
+    itens = relatorio.itens
+
+    total_lotes = (
+        len(itens) + tamanho_lote - 1
+    ) // tamanho_lote
+
     print("\nINICIANDO IMPORTACAO NO MYSQL")
     print("-" * 50)
 
-    with engine.begin() as conexao:
-        banco_atual = conexao.execute(
-            text("SELECT DATABASE()")
-        ).scalar_one()
+    for indice_lote, inicio in enumerate(
+        range(0, len(itens), tamanho_lote),
+        start=1,
+    ):
+        itens_lote = itens[
+            inicio:inicio + tamanho_lote
+        ]
 
-        if not banco_atual:
-            raise RuntimeError(
-                "Nenhum banco de dados foi selecionado."
+        variantes_lote = []
+
+        for item in itens_lote:
+            chave = (
+                item.app_id,
+                item.nome_mercado,
             )
 
-        print(
-            f"Banco de dados: {banco_atual}"
+            variantes_lote.extend(
+                variantes_por_item[chave]
+            )
+
+        relatorio_lote = replace(
+            relatorio,
+            total_recebidos=len(variantes_lote),
+            total_normalizados=len(itens_lote),
+            total_rejeitados=0,
+            total_duplicados=(
+                len(variantes_lote) - len(itens_lote)
+            ),
+            itens=tuple(itens_lote),
+            erros=(),
+            motivos_rejeicao={},
+            total_variantes_normalizadas=len(
+                variantes_lote
+            ),
+            total_variantes_duplicadas=0,
+            variantes=tuple(variantes_lote),
         )
 
-        total_itens, total_variantes = (
-            importar_lote_catalogo(
-                conexao,
-                relatorio,
+        with engine.begin() as conexao:
+            if indice_lote == 1:
+                banco_atual = conexao.execute(
+                    text("SELECT DATABASE()")
+                ).scalar_one()
+
+                if not banco_atual:
+                    raise RuntimeError(
+                        "Nenhum banco de dados foi selecionado."
+                    )
+
+                print(
+                    f"Banco de dados: {banco_atual}"
+                )
+
+            itens_processados, variantes_processadas = (
+                importar_lote_catalogo(
+                    conexao,
+                    relatorio_lote,
+                )
             )
+
+        total_itens += itens_processados
+        total_variantes += variantes_processadas
+
+        print(
+            f"Lote {indice_lote}/{total_lotes} confirmado | "
+            f"Itens: {itens_processados} | "
+            f"Variantes: {variantes_processadas}"
         )
 
     print("\nIMPORTACAO CONCLUIDA")
