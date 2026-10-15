@@ -12,6 +12,18 @@ from skinexa.integrations.catalogo.csgo_api_client import (
     ErroCSGOAPI,
 )
 
+from skinexa.dto.catalogo.importacao import (
+    ItemImportacaoCatalogoDTO,
+)
+
+from skinexa.dto.catalogo.variante import (
+    VarianteImportacaoCatalogoDTO,
+)
+
+from skinexa.dto.catalogo.normalizacao_lote import (
+    RelatorioNormalizacaoCatalogoDTO,
+)
+
 def test_executar_validacao_catalogo_com_limite(capsys):
     """Testa a validação de um lote com quantidade limitada."""
 
@@ -450,27 +462,39 @@ def test_importacao_rejeita_variante_sem_item():
 def test_importacao_utiliza_transacao():
     """Testa a persistência dos registros dentro de uma transação."""
 
-    relatorio = Mock()
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline",
+        tipo_item="rifle",
+    )
 
-    relatorio.total_rejeitados = 0
-    relatorio.total_normalizados = 1
-    relatorio.total_variantes_normalizadas = 1
+    variante = VarianteImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        fonte="csgo_api",
+        id_externo="skin-abc_0",
+    )
 
-    item = Mock()
-    item.app_id = 730
-    item.nome_mercado = "AK-47 | Redline (Field-Tested)"
-
-    variante = Mock()
-    variante.app_id = 730
-    variante.nome_mercado = "AK-47 | Redline (Field-Tested)"
-
-    relatorio.itens = (item,)
-    relatorio.variantes = (variante,)
+    relatorio = RelatorioNormalizacaoCatalogoDTO(
+        total_recebidos=1,
+        total_normalizados=1,
+        total_rejeitados=0,
+        total_duplicados=0,
+        itens=(item,),
+        erros=(),
+        motivos_rejeicao={},
+        total_variantes_normalizadas=1,
+        total_variantes_duplicadas=0,
+        variantes=(variante,),
+    )
 
     conexao = MagicMock()
 
     resultado_execute = Mock()
-    resultado_execute.scalar_one.return_value = "skinexa"
+    resultado_execute.scalar_one.return_value = (
+        "b5ygvcodkj02gnmloode"
+    )
 
     conexao.execute.return_value = resultado_execute
 
@@ -491,6 +515,7 @@ def test_importacao_utiliza_transacao():
 
         resultado = executar_importacao_catalogo(
             relatorio,
+            tamanho_lote=100,
         )
 
     assert resultado == (1, 1)
@@ -499,9 +524,274 @@ def test_importacao_utiliza_transacao():
 
     conexao.execute.assert_called_once()
 
-    mock_importar.assert_called_once_with(
-        conexao,
-        relatorio,
-    )
+    mock_importar.assert_called_once()
+
+    argumentos = mock_importar.call_args
+
+    assert argumentos.args[0] == conexao
+
+    relatorio_lote = argumentos.args[1]
+
+    assert relatorio_lote.total_normalizados == 1
+    assert relatorio_lote.total_variantes_normalizadas == 1
+
+    assert relatorio_lote.itens == (item,)
+    assert relatorio_lote.variantes == (variante,)
 
     mock_begin.return_value.__exit__.assert_called_once()
+    
+def test_importacao_catalogo_processa_multiplos_lotes():
+    """Testa a divisão dos itens comerciais em transações menores."""
+
+    itens = (
+        ItemImportacaoCatalogoDTO(
+            app_id=730,
+            nome_mercado=f"Item comercial {indice}",
+            nome_exibicao=f"Item comercial {indice}",
+            tipo_item="rifle",
+        )
+        for indice in range(1, 6)
+    )
+
+    itens = tuple(itens)
+
+    variantes = tuple(
+        VarianteImportacaoCatalogoDTO(
+            app_id=730,
+            nome_mercado=item.nome_mercado,
+            fonte="csgo_api",
+            id_externo=f"skin-{indice}",
+        )
+        for indice, item in enumerate(
+            itens,
+            start=1,
+        )
+    )
+
+    relatorio = RelatorioNormalizacaoCatalogoDTO(
+        total_recebidos=5,
+        total_normalizados=5,
+        total_rejeitados=0,
+        total_duplicados=0,
+        itens=itens,
+        erros=(),
+        motivos_rejeicao={},
+        total_variantes_normalizadas=5,
+        total_variantes_duplicadas=0,
+        variantes=variantes,
+    )
+
+    conexao = MagicMock()
+
+    resultado_execute = Mock()
+    resultado_execute.scalar_one.return_value = (
+        "b5ygvcodkj02gnmloode"
+    )
+
+    conexao.execute.return_value = resultado_execute
+
+    with (
+        patch(
+            "skinexa.database.connection.engine.begin"
+        ) as mock_begin,
+        patch(
+            "skinexa.services.catalogo.importacao."
+            "importar_lote_catalogo"
+        ) as mock_importar,
+    ):
+        mock_begin.return_value.__enter__.return_value = (
+            conexao
+        )
+
+        mock_importar.side_effect = [
+            (2, 2),
+            (2, 2),
+            (1, 1),
+        ]
+
+        resultado = executar_importacao_catalogo(
+            relatorio,
+            tamanho_lote=2,
+        )
+
+    assert resultado == (5, 5)
+
+    assert mock_begin.call_count == 3
+    assert mock_importar.call_count == 3
+
+    relatorio_lote_1 = (
+        mock_importar.call_args_list[0].args[1]
+    )
+
+    relatorio_lote_2 = (
+        mock_importar.call_args_list[1].args[1]
+    )
+
+    relatorio_lote_3 = (
+        mock_importar.call_args_list[2].args[1]
+    )
+
+    assert relatorio_lote_1.itens == itens[:2]
+    assert relatorio_lote_2.itens == itens[2:4]
+    assert relatorio_lote_3.itens == itens[4:]
+
+    assert relatorio_lote_1.variantes == variantes[:2]
+    assert relatorio_lote_2.variantes == variantes[2:4]
+    assert relatorio_lote_3.variantes == variantes[4:]
+
+def test_importacao_agrupa_variantes_do_mesmo_item():
+    """Testa que variantes do mesmo item permanecem no mesmo lote."""
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline",
+        tipo_item="rifle",
+    )
+
+    variantes = (
+        VarianteImportacaoCatalogoDTO(
+            app_id=730,
+            nome_mercado=item.nome_mercado,
+            fonte="csgo_api",
+            id_externo="skin-abc_0",
+        ),
+        VarianteImportacaoCatalogoDTO(
+            app_id=730,
+            nome_mercado=item.nome_mercado,
+            fonte="csgo_api",
+            id_externo="skin-abc_1",
+        ),
+    )
+
+    relatorio = RelatorioNormalizacaoCatalogoDTO(
+        total_recebidos=2,
+        total_normalizados=1,
+        total_rejeitados=0,
+        total_duplicados=1,
+        itens=(item,),
+        erros=(),
+        motivos_rejeicao={},
+        total_variantes_normalizadas=2,
+        total_variantes_duplicadas=0,
+        variantes=variantes,
+    )
+
+    conexao = MagicMock()
+
+    resultado_execute = Mock()
+    resultado_execute.scalar_one.return_value = (
+        "b5ygvcodkj02gnmloode"
+    )
+
+    conexao.execute.return_value = resultado_execute
+
+    with (
+        patch(
+            "skinexa.database.connection.engine.begin"
+        ) as mock_begin,
+        patch(
+            "skinexa.services.catalogo.importacao."
+            "importar_lote_catalogo"
+        ) as mock_importar,
+    ):
+        mock_begin.return_value.__enter__.return_value = conexao
+        mock_importar.return_value = (1, 2)
+
+        resultado = executar_importacao_catalogo(
+            relatorio,
+            tamanho_lote=100,
+        )
+
+    assert resultado == (1, 2)
+
+    mock_begin.assert_called_once()
+    mock_importar.assert_called_once()
+
+    relatorio_lote = mock_importar.call_args.args[1]
+
+    assert relatorio_lote.itens == (item,)
+    assert relatorio_lote.variantes == variantes
+    assert relatorio_lote.total_variantes_normalizadas == 2
+
+def test_importacao_interrompe_apos_falha_no_segundo_lote():
+    """Testa a interrupção da importação após uma falha intermediária."""
+
+    itens = tuple(
+        ItemImportacaoCatalogoDTO(
+            app_id=730,
+            nome_mercado=f"Item comercial {indice}",
+            nome_exibicao=f"Item comercial {indice}",
+            tipo_item="rifle",
+        )
+        for indice in range(1, 4)
+    )
+
+    variantes = tuple(
+        VarianteImportacaoCatalogoDTO(
+            app_id=730,
+            nome_mercado=item.nome_mercado,
+            fonte="csgo_api",
+            id_externo=f"skin-{indice}",
+        )
+        for indice, item in enumerate(
+            itens,
+            start=1,
+        )
+    )
+
+    relatorio = RelatorioNormalizacaoCatalogoDTO(
+        total_recebidos=3,
+        total_normalizados=3,
+        total_rejeitados=0,
+        total_duplicados=0,
+        itens=itens,
+        erros=(),
+        motivos_rejeicao={},
+        total_variantes_normalizadas=3,
+        total_variantes_duplicadas=0,
+        variantes=variantes,
+    )
+
+    conexao = MagicMock()
+
+    resultado_execute = Mock()
+    resultado_execute.scalar_one.return_value = (
+        "b5ygvcodkj02gnmloode"
+    )
+
+    conexao.execute.return_value = resultado_execute
+
+    with (
+        patch(
+            "skinexa.database.connection.engine.begin"
+        ) as mock_begin,
+        patch(
+            "skinexa.services.catalogo.importacao."
+            "importar_lote_catalogo"
+        ) as mock_importar,
+    ):
+        mock_begin.return_value.__enter__.return_value = conexao
+
+        mock_importar.side_effect = [
+            (1, 1),
+            RuntimeError("Falha ao importar o segundo lote."),
+        ]
+
+        with pytest.raises(
+            RuntimeError,
+            match="Falha ao importar o segundo lote",
+        ):
+            executar_importacao_catalogo(
+                relatorio,
+                tamanho_lote=1,
+            )
+
+    assert mock_begin.call_count == 2
+    assert mock_importar.call_count == 2
+
+    relatorio_lote_1 = mock_importar.call_args_list[0].args[1]
+    relatorio_lote_2 = mock_importar.call_args_list[1].args[1]
+
+    assert relatorio_lote_1.itens == (itens[0],)
+    assert relatorio_lote_2.itens == (itens[1],)
