@@ -35,3 +35,6 @@ isort = "^8.0.1"
 flake8 = "^7.3.0"
 responses = "^0.26.2"
 
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+
