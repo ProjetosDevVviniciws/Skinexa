@@ -2,6 +2,10 @@ import pytest
 
 from unittest.mock import MagicMock, Mock, patch
 
+from pymysql.err import OperationalError as PyMySQLOperationalError
+
+from sqlalchemy.exc import OperationalError
+
 from scripts.importar_catalogo_csgo_api import (
     executar_validacao_catalogo,
     executar_importacao_catalogo,
@@ -795,3 +799,187 @@ def test_importacao_interrompe_apos_falha_no_segundo_lote():
 
     assert relatorio_lote_1.itens == (itens[0],)
     assert relatorio_lote_2.itens == (itens[1],)
+
+def test_importacao_recupera_conexao_perdida():
+    """Testa uma nova tentativa após a perda da conexão MySQL."""
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline",
+        tipo_item="rifle",
+    )
+
+    variante = VarianteImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado=item.nome_mercado,
+        fonte="csgo_api",
+        id_externo="skin-abc_0",
+    )
+
+    relatorio = RelatorioNormalizacaoCatalogoDTO(
+        total_recebidos=1,
+        total_normalizados=1,
+        total_rejeitados=0,
+        total_duplicados=0,
+        itens=(item,),
+        erros=(),
+        motivos_rejeicao={},
+        total_variantes_normalizadas=1,
+        total_variantes_duplicadas=0,
+        variantes=(variante,),
+    )
+
+    conexao = MagicMock()
+
+    resultado_execute = Mock()
+    resultado_execute.scalar_one.return_value = (
+        "skinexa_test"
+    )
+
+    conexao.execute.return_value = resultado_execute
+
+    erro_conexao = OperationalError(
+        statement="SELECT 1",
+        params={},
+        orig=PyMySQLOperationalError(
+            2013,
+            "Lost connection to MySQL server during query",
+        ),
+    )
+
+    with (
+        patch(
+            "skinexa.database.connection.engine.begin"
+        ) as mock_begin,
+        patch(
+            "skinexa.database.connection.engine.dispose"
+        ) as mock_dispose,
+        patch(
+            "skinexa.services.catalogo.importacao."
+            "importar_lote_catalogo"
+        ) as mock_importar,
+        patch(
+            "scripts.importar_catalogo_csgo_api.time.sleep"
+        ) as mock_sleep,
+    ):
+        mock_begin.return_value.__enter__.return_value = (
+            conexao
+        )
+
+        mock_importar.side_effect = [
+            erro_conexao,
+            (1, 1),
+        ]
+
+        resultado = executar_importacao_catalogo(
+            relatorio,
+            tamanho_lote=100,
+        )
+
+    assert resultado == (1, 1)
+
+    assert mock_begin.call_count == 2
+    assert mock_importar.call_count == 2
+
+    mock_dispose.assert_called_once()
+    mock_sleep.assert_called_once_with(2)
+
+    assert (
+        mock_importar.call_args_list[0].args[1].itens
+        ==
+        mock_importar.call_args_list[1].args[1].itens
+    )
+
+    assert (
+        mock_importar.call_args_list[0].args[1].variantes
+        ==
+        mock_importar.call_args_list[1].args[1].variantes
+    )
+
+def test_importacao_esgota_tentativas_de_reconexao():
+    """Testa a propagação do erro após três falhas de conexão."""
+
+    item = ItemImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado="AK-47 | Redline (Field-Tested)",
+        nome_exibicao="AK-47 | Redline",
+        tipo_item="rifle",
+    )
+
+    variante = VarianteImportacaoCatalogoDTO(
+        app_id=730,
+        nome_mercado=item.nome_mercado,
+        fonte="csgo_api",
+        id_externo="skin-abc_0",
+    )
+
+    relatorio = RelatorioNormalizacaoCatalogoDTO(
+        total_recebidos=1,
+        total_normalizados=1,
+        total_rejeitados=0,
+        total_duplicados=0,
+        itens=(item,),
+        erros=(),
+        motivos_rejeicao={},
+        total_variantes_normalizadas=1,
+        total_variantes_duplicadas=0,
+        variantes=(variante,),
+    )
+
+    conexao = MagicMock()
+
+    resultado_execute = Mock()
+    resultado_execute.scalar_one.return_value = (
+        "skinexa_test"
+    )
+
+    conexao.execute.return_value = resultado_execute
+
+    erro_conexao = OperationalError(
+        statement="SELECT 1",
+        params={},
+        orig=PyMySQLOperationalError(
+            2013,
+            "Lost connection to MySQL server during query",
+        ),
+    )
+
+    with (
+        patch(
+            "skinexa.database.connection.engine.begin"
+        ) as mock_begin,
+        patch(
+            "skinexa.database.connection.engine.dispose"
+        ) as mock_dispose,
+        patch(
+            "skinexa.services.catalogo.importacao."
+            "importar_lote_catalogo"
+        ) as mock_importar,
+        patch(
+            "scripts.importar_catalogo_csgo_api.time.sleep"
+        ) as mock_sleep,
+    ):
+        mock_begin.return_value.__enter__.return_value = (
+            conexao
+        )
+
+        mock_importar.side_effect = [
+            erro_conexao,
+            erro_conexao,
+            erro_conexao,
+        ]
+
+        with pytest.raises(
+            OperationalError,
+        ):
+            executar_importacao_catalogo(
+                relatorio,
+                tamanho_lote=100,
+            )
+
+    assert mock_begin.call_count == 3
+    assert mock_importar.call_count == 3
+
+    assert mock_dispose.call_count == 3
+    assert mock_sleep.call_count == 2
