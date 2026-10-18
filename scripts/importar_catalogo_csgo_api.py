@@ -4,6 +4,10 @@ import argparse
 
 import sys
 
+import time
+
+from sqlalchemy.exc import OperationalError
+
 from collections import Counter
 
 from dataclasses import replace
@@ -243,6 +247,7 @@ def executar_importacao_catalogo(
     print("\nINICIANDO IMPORTACAO NO MYSQL")
     print("-" * 50)
 
+    max_tentativas = 3
     for indice_lote, inicio in enumerate(
         range(0, len(itens), tamanho_lote),
         start=1,
@@ -281,27 +286,59 @@ def executar_importacao_catalogo(
             variantes=tuple(variantes_lote),
         )
 
-        with engine.begin() as conexao:
-            if indice_lote == 1:
-                banco_atual = conexao.execute(
-                    text("SELECT DATABASE()")
-                ).scalar_one()
+        for tentativa in range(1, max_tentativas + 1):
+            try:
+                with engine.begin() as conexao:
+                    if indice_lote == 1:
+                        banco_atual = conexao.execute(
+                            text("SELECT DATABASE()")
+                        ).scalar_one()
 
-                if not banco_atual:
-                    raise RuntimeError(
-                        "Nenhum banco de dados foi selecionado."
+                        if not banco_atual:
+                            raise RuntimeError(
+                                "Nenhum banco de dados foi selecionado."
+                            )
+
+                        print(
+                            f"Banco de dados: {banco_atual}"
+                        )
+
+                    itens_processados, variantes_processadas = (
+                        importar_lote_catalogo(
+                            conexao,
+                            relatorio_lote,
+                        )
                     )
 
-                print(
-                    f"Banco de dados: {banco_atual}"
+                break
+
+            except OperationalError as erro:
+                codigo_mysql = (
+                    erro.orig.args[0]
+                    if getattr(erro.orig, "args", None)
+                    else None
                 )
 
-            itens_processados, variantes_processadas = (
-                importar_lote_catalogo(
-                    conexao,
-                    relatorio_lote,
+                if codigo_mysql not in (2006, 2013):
+                    raise
+
+                engine.dispose()
+
+                if tentativa == max_tentativas:
+                    print(
+                        f"Falha definitiva no lote "
+                        f"{indice_lote}/{total_lotes}."
+                    )
+                    raise
+
+                print(
+                    f"Conexao perdida no lote "
+                    f"{indice_lote}/{total_lotes}. "
+                    f"Nova tentativa: "
+                    f"{tentativa + 1}/{max_tentativas}"
                 )
-            )
+
+                time.sleep(2)
 
         total_itens += itens_processados
         total_variantes += variantes_processadas
@@ -312,6 +349,11 @@ def executar_importacao_catalogo(
             f"Variantes: {variantes_processadas}"
         )
 
+        if (
+            indice_lote % 10 == 0
+            and indice_lote < total_lotes
+        ):
+            engine.dispose()
     print("\nIMPORTACAO CONCLUIDA")
     print("-" * 50)
 
