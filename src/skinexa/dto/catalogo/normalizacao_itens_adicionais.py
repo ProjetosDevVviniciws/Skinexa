@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from skinexa.dto.catalogo.importacao import (
     ItemImportacaoCatalogoDTO,
 )
-from skinexa.dto.catalogo.variante import VarianteImportacaoCatalogoDTO
+from skinexa.dto.catalogo.variante import (
+    VarianteImportacaoCatalogoDTO,
+)
 
 @dataclass(frozen=True, slots=True)
 class RegistroPendenteCatalogoDTO:
