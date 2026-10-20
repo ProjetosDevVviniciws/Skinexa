@@ -2,6 +2,8 @@
 
 from collections import Counter
 
+from typing import Any
+
 from skinexa.integrations.catalogo.csgo_api_client import (
     buscar_itens_csgo_api,
 )
@@ -18,15 +20,12 @@ CATEGORIAS_AUDITORIA = (
 
 def auditar_categoria(
     categoria: str,
+    registros: list[dict[str, Any]],
 ) -> None:
     """Analisa os campos e identificadores de uma categoria."""
 
     print(f"\nCATEGORIA: {categoria.upper()}")
     print("-" * 50)
-
-    registros = buscar_itens_csgo_api(
-        categoria
-    )
 
     campos = Counter()
     tipos = Counter()
@@ -178,6 +177,7 @@ def auditar_categoria(
 
 def auditar_normalizacao_categoria(
     categoria: str,
+    registros: list[dict[str, Any]],
 ) -> None:
     """Valida a normalização de uma categoria com dados reais."""
 
@@ -185,10 +185,6 @@ def auditar_normalizacao_categoria(
         f"\nNORMALIZACAO EM LOTE: {categoria.upper()}"
     )
     print("-" * 50)
-
-    registros = buscar_itens_csgo_api(
-        categoria
-    )
 
     relatorio = normalizar_lote_itens_adicionais_csgo_api(
         registros,
@@ -216,6 +212,81 @@ def auditar_normalizacao_categoria(
         f"Duplicacoes comerciais: {relatorio.total_duplicados}"
     )
 
+    print(
+        "Variantes normalizadas: "
+        f"{relatorio.total_variantes_normalizadas}"
+    )
+
+    print(
+        "Variantes duplicadas: "
+        f"{relatorio.total_variantes_duplicadas}"
+    )
+
+    chaves_comerciais = {
+        (
+            item.app_id,
+            item.nome_mercado,
+        )
+        for item in relatorio.itens
+    }
+
+    variantes_sem_item = [
+        variante
+        for variante in relatorio.variantes
+        if (
+            variante.app_id,
+            variante.nome_mercado,
+        ) not in chaves_comerciais
+    ]
+
+    print(
+        f"Variantes sem item comercial: "
+        f"{len(variantes_sem_item)}"
+    )
+
+    if variantes_sem_item:
+        raise RuntimeError(
+            "Foram encontradas variantes sem item comercial."
+        )
+    
+    chaves_variantes = {
+        (
+            variante.fonte,
+            variante.id_externo,
+        )
+        for variante in relatorio.variantes
+    }
+
+    if len(chaves_variantes) != len(relatorio.variantes):
+        raise RuntimeError(
+            "Foram encontradas variantes externas duplicadas."
+        )
+
+    for variante in relatorio.variantes:
+        if variante.fonte != "csgo_api":
+            raise RuntimeError(
+                "Foi encontrada uma variante com fonte inesperada."
+            )
+
+        if variante.skin_id_externo is not None:
+            raise RuntimeError(
+                "Uma variante adicional recebeu um ID de skin."
+            )
+
+        if variante.indice_pintura is not None:
+            raise RuntimeError(
+                "Uma variante adicional recebeu um índice de pintura."
+            )
+
+        if variante.identificador_acabamento is not None:
+            raise RuntimeError(
+                "Uma variante adicional recebeu um identificador de acabamento."
+            )
+        
+    print(
+        "Identificadores externos validados com sucesso."
+    )
+    
     total_classificados = (
         relatorio.total_normalizados
         + relatorio.total_sem_identidade_comercial
@@ -233,6 +304,32 @@ def auditar_normalizacao_categoria(
             "todos os registros recebidos."
         )
 
+    total_variantes_classificadas = (
+        relatorio.total_variantes_normalizadas
+        + relatorio.total_variantes_duplicadas
+    )
+
+    total_registros_elegiveis = (
+        relatorio.total_recebidos
+        - relatorio.total_sem_identidade_comercial
+        - relatorio.total_rejeitados
+    )
+
+    print(
+        "Registros elegíveis para variantes: "
+        f"{total_registros_elegiveis}"
+    )
+
+    print(
+        "Variantes classificadas: "
+        f"{total_variantes_classificadas}"
+    )
+
+    if total_variantes_classificadas != total_registros_elegiveis:
+        raise RuntimeError(
+            "A classificação das variantes apresentou inconsistências."
+        )
+    
     print("\nMOTIVOS DE REJEICAO")
     print("-" * 50)
 
@@ -263,6 +360,20 @@ def auditar_normalizacao_categoria(
             }
         )
 
+    print("\nEXEMPLOS DE VARIANTES NORMALIZADAS")
+    print("-" * 50)
+
+    for variante in relatorio.variantes[:3]:
+        print(
+            {
+                "app_id": variante.app_id,
+                "nome_mercado": variante.nome_mercado,
+                "fonte": variante.fonte,
+                "id_externo": variante.id_externo,
+                "url_imagem": variante.url_imagem,
+            }
+        )
+    
     print("\nEXEMPLOS SEM IDENTIDADE COMERCIAL")
     print("-" * 50)
 
@@ -293,12 +404,18 @@ def main() -> int:
     print("=" * 50)
 
     for categoria in CATEGORIAS_AUDITORIA:
-        auditar_categoria(
+        registros = buscar_itens_csgo_api(
             categoria
         )
 
+        auditar_categoria(
+            categoria,
+            registros,
+        )
+
         auditar_normalizacao_categoria(
-            categoria
+            categoria,
+            registros,
         )
         
     print("\nAUDITORIA CONCLUIDA")
