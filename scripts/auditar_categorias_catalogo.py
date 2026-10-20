@@ -1,0 +1,316 @@
+"""Audita as estruturas das novas categorias do catálogo CS2."""
+
+from collections import Counter
+
+from skinexa.integrations.catalogo.csgo_api_client import (
+    buscar_itens_csgo_api,
+)
+
+from skinexa.services.catalogo.normalizacao_itens_adicionais import (
+    normalizar_lote_itens_adicionais_csgo_api,
+)
+
+CATEGORIAS_AUDITORIA = (
+    "adesivos",
+    "caixas",
+    "agentes",
+)
+
+def auditar_categoria(
+    categoria: str,
+) -> None:
+    """Analisa os campos e identificadores de uma categoria."""
+
+    print(f"\nCATEGORIA: {categoria.upper()}")
+    print("-" * 50)
+
+    registros = buscar_itens_csgo_api(
+        categoria
+    )
+
+    campos = Counter()
+    tipos = Counter()
+
+    total_com_id = 0
+    total_com_nome = 0
+    total_com_nome_mercado = 0
+    total_com_imagem = 0
+
+    nomes_comerciais = Counter()
+    ids_externos = Counter()
+
+    for registro in registros:
+        campos.update(
+            registro.keys()
+        )
+
+        identificador = registro.get("id")
+        nome = registro.get("name")
+        nome_mercado = registro.get(
+            "market_hash_name"
+        )
+        imagem = registro.get("image")
+        tipo = registro.get("type")
+
+        if identificador:
+            total_com_id += 1
+
+            ids_externos[
+                str(identificador)
+            ] += 1
+
+        if nome:
+            total_com_nome += 1
+
+        if nome_mercado:
+            total_com_nome_mercado += 1
+
+            nomes_comerciais[
+                str(nome_mercado)
+            ] += 1
+
+        if imagem:
+            total_com_imagem += 1
+
+        if tipo is not None:
+            tipos[str(tipo)] += 1
+
+    print(
+        f"Total de registros: {len(registros)}"
+    )
+
+    print(
+        f"Registros com ID externo: {total_com_id}"
+    )
+
+    print(
+        f"Registros com nome: {total_com_nome}"
+    )
+
+    print(
+        "Registros com market_hash_name: "
+        f"{total_com_nome_mercado}"
+    )
+
+    print(
+        f"Registros com imagem: {total_com_imagem}"
+    )
+
+    ids_duplicados = {
+        identificador: quantidade
+        for identificador, quantidade
+        in ids_externos.items()
+        if quantidade > 1
+    }
+
+    nomes_duplicados = {
+        nome: quantidade
+        for nome, quantidade
+        in nomes_comerciais.items()
+        if quantidade > 1
+    }
+
+    print(
+        f"IDs externos duplicados: "
+        f"{len(ids_duplicados)}"
+    )
+
+    print(
+        f"Nomes comerciais duplicados: "
+        f"{len(nomes_duplicados)}"
+    )
+
+    print("\nCAMPOS DISPONIVEIS")
+    print("-" * 50)
+
+    for campo, quantidade in sorted(
+        campos.items()
+    ):
+        print(
+            f"{campo}: {quantidade}"
+        )
+
+    print("\nTIPOS ENCONTRADOS")
+    print("-" * 50)
+
+    if tipos:
+        for tipo, quantidade in sorted(
+            tipos.items()
+        ):
+            print(
+                f"{tipo}: {quantidade}"
+            )
+    else:
+        print(
+            "Nenhum tipo informado."
+        )
+
+    print("\nEXEMPLOS DE REGISTROS")
+    print("-" * 50)
+
+    for registro in registros[:3]:
+        print(
+            {
+                "id": registro.get("id"),
+                "name": registro.get("name"),
+                "market_hash_name": registro.get(
+                    "market_hash_name"
+                ),
+                "def_index": registro.get(
+                    "def_index"
+                ),
+                "type": registro.get("type"),
+                "rarity": registro.get("rarity"),
+                "image": registro.get("image"),
+            }
+        )
+
+    if nomes_duplicados:
+        print("\nEXEMPLOS DE NOMES DUPLICADOS")
+        print("-" * 50)
+
+        for nome, quantidade in list(
+            nomes_duplicados.items()
+        )[:10]:
+            print(
+                f"{quantidade} | {nome}"
+            )
+
+def auditar_normalizacao_categoria(
+    categoria: str,
+) -> None:
+    """Valida a normalização de uma categoria com dados reais."""
+
+    print(
+        f"\nNORMALIZACAO EM LOTE: {categoria.upper()}"
+    )
+    print("-" * 50)
+
+    registros = buscar_itens_csgo_api(
+        categoria
+    )
+
+    relatorio = normalizar_lote_itens_adicionais_csgo_api(
+        registros,
+        categoria=categoria,
+    )
+
+    print(
+        f"Registros recebidos: {relatorio.total_recebidos}"
+    )
+
+    print(
+        f"Itens normalizados: {relatorio.total_normalizados}"
+    )
+
+    print(
+        "Sem identidade comercial: "
+        f"{relatorio.total_sem_identidade_comercial}"
+    )
+
+    print(
+        f"Registros rejeitados: {relatorio.total_rejeitados}"
+    )
+
+    print(
+        f"Duplicacoes comerciais: {relatorio.total_duplicados}"
+    )
+
+    total_classificados = (
+        relatorio.total_normalizados
+        + relatorio.total_sem_identidade_comercial
+        + relatorio.total_rejeitados
+        + relatorio.total_duplicados
+    )
+
+    print(
+        f"Total classificado: {total_classificados}"
+    )
+
+    if total_classificados != relatorio.total_recebidos:
+        raise RuntimeError(
+            "A normalização não classificou "
+            "todos os registros recebidos."
+        )
+
+    print("\nMOTIVOS DE REJEICAO")
+    print("-" * 50)
+
+    if relatorio.motivos_rejeicao:
+        for motivo, quantidade in sorted(
+            relatorio.motivos_rejeicao.items()
+        ):
+            print(
+                f"{quantidade} | {motivo}"
+            )
+    else:
+        print("Nenhuma rejeicao encontrada.")
+
+    print("\nEXEMPLOS DE ITENS NORMALIZADOS")
+    print("-" * 50)
+
+    for item in relatorio.itens[:3]:
+        print(
+            {
+                "nome_mercado": item.nome_mercado,
+                "nome_exibicao": item.nome_exibicao,
+                "tipo_item": item.tipo_item,
+                "raridade": item.raridade,
+                "url_icone_grande": item.url_icone_grande,
+                "id_externo": item.metadados_origem.get(
+                    "id_externo"
+                ) if item.metadados_origem else None,
+            }
+        )
+
+    print("\nEXEMPLOS SEM IDENTIDADE COMERCIAL")
+    print("-" * 50)
+
+    for pendente in relatorio.pendentes[:5]:
+        print(
+            {
+                "indice": pendente.indice,
+                "id_externo": pendente.id_externo,
+                "nome_exibicao": pendente.nome_exibicao,
+            }
+        )
+
+    if relatorio.total_rejeitados > 0:
+        raise RuntimeError(
+            f"A categoria {categoria} apresentou "
+            "registros rejeitados."
+        )
+
+    print(
+        f"\nNormalizacao de {categoria} "
+        "concluida com sucesso."
+    )
+
+def main() -> int:
+    """Executa a auditoria das categorias adicionais."""
+
+    print("\nSKINEXA - AUDITORIA DE CATEGORIAS")
+    print("=" * 50)
+
+    for categoria in CATEGORIAS_AUDITORIA:
+        auditar_categoria(
+            categoria
+        )
+
+        auditar_normalizacao_categoria(
+            categoria
+        )
+        
+    print("\nAUDITORIA CONCLUIDA")
+    print("-" * 50)
+
+    print(
+        "Nenhum registro foi gravado no MySQL."
+    )
+
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(
+        main()
+    )
