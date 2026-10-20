@@ -37,4 +37,3 @@ responses = "^0.26.2"
 
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
-
