@@ -15,12 +15,17 @@ from skinexa.integrations.catalogo.normalizador_itens_adicionais_csgo_api import
     normalizar_item_adicional_csgo_api,
 )
 
+from skinexa.integrations.catalogo.normalizador_variantes_itens_adicionais_csgo_api import (
+    ErroNormalizacaoVarianteAdicionalCSGOAPI,
+    normalizar_variante_item_adicional_csgo_api,
+)
+
 def normalizar_lote_itens_adicionais_csgo_api(
     registros: list[dict[str, Any]],
     *,
     categoria: str,
 ) -> RelatorioItensAdicionaisDTO:
-    """Normaliza uma categoria e separa registros sem nome comercial."""
+    """Normaliza itens adicionais e seus vínculos externos."""
 
     if categoria not in TIPOS_ITENS_ADICIONAIS:
         raise ValueError(
@@ -28,12 +33,16 @@ def normalizar_lote_itens_adicionais_csgo_api(
         )
 
     itens = []
+    variantes = []
     pendentes = []
     erros = []
 
     chaves_comerciais = set()
-    total_duplicados = 0
+    variantes_encontradas = {}
 
+    total_duplicados = 0
+    total_variantes_duplicadas = 0
+    
     for indice, registro in enumerate(registros):
         id_externo = None
 
@@ -76,7 +85,15 @@ def normalizar_lote_itens_adicionais_csgo_api(
                 categoria=categoria,
             )
 
-        except ErroNormalizacaoItemAdicionalCSGOAPI as erro:
+            variante = normalizar_variante_item_adicional_csgo_api(
+                registro,
+                categoria=categoria,
+            )
+            
+        except (
+            ErroNormalizacaoItemAdicionalCSGOAPI,
+            ErroNormalizacaoVarianteAdicionalCSGOAPI,
+        ) as erro:
             erros.append(
                 ErroNormalizacaoItemAdicionalDTO(
                     categoria=categoria,
@@ -93,12 +110,53 @@ def normalizar_lote_itens_adicionais_csgo_api(
             item.nome_mercado,
         )
 
+        chave_variante = (
+            variante.fonte,
+            variante.id_externo,
+        )
+        
+        if chave_variante in variantes_encontradas:
+            chave_anterior = variantes_encontradas[
+                chave_variante
+            ]
+
+            if chave_anterior != chave_comercial:
+                erros.append(
+                    ErroNormalizacaoItemAdicionalDTO(
+                        categoria=categoria,
+                        indice=indice,
+                        id_externo=id_externo,
+                        motivo=(
+                            "ID externo associado a itens "
+                            "comerciais diferentes."
+                        ),
+                    )
+                )
+
+                continue
+
+            total_variantes_duplicadas += 1
+
+        else:
+            variantes_encontradas[chave_variante] = (
+                chave_comercial
+            )
+
+            variantes.append(
+                variante
+            )
+
         if chave_comercial in chaves_comerciais:
             total_duplicados += 1
-            continue
 
-        chaves_comerciais.add(chave_comercial)
-        itens.append(item)
+        else:
+            chaves_comerciais.add(
+                chave_comercial
+            )
+
+            itens.append(
+                item
+            )
 
     motivos_rejeicao = dict(
         Counter(
@@ -115,10 +173,14 @@ def normalizar_lote_itens_adicionais_csgo_api(
         total_rejeitados=len(erros),
         total_duplicados=total_duplicados,
         itens=tuple(itens),
-        variantes=(),
         pendentes=tuple(pendentes),
         erros=tuple(erros),
         motivos_rejeicao=motivos_rejeicao,
-        total_variantes_normalizadas=0,
-        total_variantes_duplicadas=0,
+        total_variantes_normalizadas=len(
+            variantes
+        ),
+        total_variantes_duplicadas=(
+            total_variantes_duplicadas
+        ),
+        variantes=tuple(variantes),
     )
