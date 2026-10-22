@@ -173,6 +173,7 @@ def executar_importacao_catalogo(
     relatorio: RelatorioNormalizacaoCatalogoDTO,
     *,
     tamanho_lote: int = 100,
+    validar_vinculos: bool = False,
 ) -> tuple[int, int]:
     """
     Importa itens e variantes em transações independentes.
@@ -303,12 +304,21 @@ def executar_importacao_catalogo(
                             f"Banco de dados: {banco_atual}"
                         )
 
-                    itens_processados, variantes_processadas = (
-                        importar_lote_catalogo(
-                            conexao,
-                            relatorio_lote,
+                    if validar_vinculos:
+                        itens_processados, variantes_processadas = (
+                            importar_lote_catalogo(
+                                conexao,
+                                relatorio_lote,
+                                validar_vinculos=True,
+                            )
                         )
-                    )
+                    else:
+                        itens_processados, variantes_processadas = (
+                            importar_lote_catalogo(
+                                conexao,
+                                relatorio_lote,
+                            )
+                        )
 
                 break
 
