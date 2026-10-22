@@ -11,6 +11,7 @@ def inserir_ou_atualizar_variante_catalogo_importacao(
     *,
     item_catalogo_id: int,
     variante: VarianteImportacaoCatalogoDTO,
+    proteger_vinculo: bool = False,
 ) -> int:
     """
     Insere ou atualiza uma variante de item do catálogo.
@@ -44,8 +45,14 @@ def inserir_ou_atualizar_variante_catalogo_importacao(
             "O identificador externo não pode ser vazio."
         )
 
+    atualizacao_vinculo = (
+        "item_catalogo_id = item_catalogo_id,"
+        if proteger_vinculo
+        else "item_catalogo_id = VALUES(item_catalogo_id),"
+        )
+    
     consulta = text(
-        """
+        f"""
         INSERT INTO variantes_itens_catalogo (
             item_catalogo_id,
             fonte,
@@ -68,7 +75,7 @@ def inserir_ou_atualizar_variante_catalogo_importacao(
         )
         ON DUPLICATE KEY UPDATE
             id = LAST_INSERT_ID(id),
-            item_catalogo_id = VALUES(item_catalogo_id),
+            {atualizacao_vinculo}
             skin_id_externo = COALESCE(
                 VALUES(skin_id_externo),
                 skin_id_externo
