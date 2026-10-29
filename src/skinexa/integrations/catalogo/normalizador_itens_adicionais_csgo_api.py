@@ -10,6 +10,14 @@ TIPOS_ITENS_ADICIONAIS = {
     "adesivos": "adesivo",
     "caixas": "caixa",
     "agentes": "agente",
+    "patches": "patch",
+    "chaveiros": "chaveiro",
+    "grafites": "grafite",
+    "musicas": "musica",
+    "colecionaveis": "colecionavel",
+    "adesivos_encapsulados": "adesivo_encapsulado",
+    "chaves": "chave",
+    "destaques": "destaque",
 }
 
 class ErroNormalizacaoItemAdicionalCSGOAPI(ValueError):
@@ -85,6 +93,21 @@ def normalizar_item_adicional_csgo_api(
         "rental",
         "special_notes",
         "original",
+        "icon_base",
+        "color_index",
+        "tint",
+        "exclusive",
+        "genuine",
+        "premier_season",
+        "marketable",
+        "map",
+        "stage",
+        "team0",
+        "team1",
+        "thumbnail",
+        "tournament_event",
+        "tournament_player",
+        "video",
     }
 
     metadados_origem = {
