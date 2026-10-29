@@ -13,9 +13,14 @@ from skinexa.services.catalogo.normalizacao_itens_adicionais import (
 )
 
 CATEGORIAS_AUDITORIA = (
-    "adesivos",
-    "caixas",
-    "agentes",
+    "patches",
+    "chaveiros",
+    "grafites",
+    "musicas",
+    "colecionaveis",
+    "adesivos_encapsulados",
+    "chaves",
+    "destaques",
 )
 
 def carregar_dados_auditoria() -> tuple[list[dict], list[dict]]:
