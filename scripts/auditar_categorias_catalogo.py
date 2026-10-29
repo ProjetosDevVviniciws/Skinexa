@@ -5,6 +5,7 @@ from collections import Counter
 from typing import Any
 
 from skinexa.integrations.catalogo.csgo_api_client import (
+    ARQUIVOS_CATALOGO,
     buscar_itens_csgo_api,
 )
 
@@ -12,10 +13,21 @@ from skinexa.services.catalogo.normalizacao_itens_adicionais import (
     normalizar_lote_itens_adicionais_csgo_api,
 )
 
+from skinexa.integrations.catalogo.normalizador_itens_adicionais_csgo_api import (
+    TIPOS_ITENS_ADICIONAIS,
+)
+
 CATEGORIAS_AUDITORIA = (
-    "adesivos",
-    "caixas",
-    "agentes",
+    "patches",
+    "chaveiros",
+    "grafites",
+    "musicas",
+    "colecionaveis",
+    "adesivos_encapsulados",
+    "chaves",
+    "destaques",
+    "armas_base",
+    "pets",
 )
 
 def auditar_categoria(
@@ -398,10 +410,19 @@ def auditar_normalizacao_categoria(
     )
 
 def main() -> int:
-    """Executa a auditoria das categorias adicionais."""
+    """Audita as categorias restantes da CSGO-API."""
 
     print("\nSKINEXA - AUDITORIA DE CATEGORIAS")
     print("=" * 50)
+
+    print(
+        f"Categorias selecionadas: "
+        f"{len(CATEGORIAS_AUDITORIA)}"
+    )
+
+    total_registros = 0
+    total_com_nome_mercado = 0
+    total_sem_nome_mercado = 0
 
     for categoria in CATEGORIAS_AUDITORIA:
         registros = buscar_itens_csgo_api(
@@ -413,11 +434,57 @@ def main() -> int:
             registros,
         )
 
-        auditar_normalizacao_categoria(
-            categoria,
-            registros,
-        )
-        
+        total_registros += len(registros)
+
+        for registro in registros:
+            nome_mercado = registro.get(
+                "market_hash_name"
+            )
+
+            if (
+                isinstance(nome_mercado, str)
+                and nome_mercado.strip()
+            ):
+                total_com_nome_mercado += 1
+            else:
+                total_sem_nome_mercado += 1
+
+        if categoria in TIPOS_ITENS_ADICIONAIS:
+            auditar_normalizacao_categoria(
+                categoria,
+                registros,
+            )
+        else:
+            print("\nNORMALIZACAO")
+            print("-" * 50)
+            print(
+                "Categoria aguardando implementação "
+                "do normalizador."
+            )
+
+    print("\nRESUMO DA AUDITORIA")
+    print("-" * 50)
+
+    print(
+        f"Categorias analisadas: "
+        f"{len(CATEGORIAS_AUDITORIA)}"
+    )
+
+    print(
+        f"Registros recebidos: "
+        f"{total_registros}"
+    )
+
+    print(
+        "Registros com identidade comercial: "
+        f"{total_com_nome_mercado}"
+    )
+
+    print(
+        "Registros sem identidade comercial: "
+        f"{total_sem_nome_mercado}"
+    )
+
     print("\nAUDITORIA CONCLUIDA")
     print("-" * 50)
 
