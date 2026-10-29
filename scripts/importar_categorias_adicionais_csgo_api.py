@@ -32,6 +32,22 @@ CATEGORIAS_ADICIONAIS = (
     "agentes",
 )
 
+CATEGORIAS_EXPANSAO = (
+    "patches",
+    "chaveiros",
+    "grafites",
+    "musicas",
+    "colecionaveis",
+    "adesivos_encapsulados",
+    "chaves",
+    "destaques",
+)
+
+CATEGORIAS_DISPONIVEIS = (
+    *CATEGORIAS_ADICIONAIS,
+    *CATEGORIAS_EXPANSAO,
+)
+
 def adaptar_relatorio_importacao(
     relatorios: list[RelatorioItensAdicionaisDTO],
 ) -> RelatorioNormalizacaoCatalogoDTO:
@@ -155,6 +171,7 @@ def adaptar_relatorio_importacao(
 def executar_validacao_categorias_adicionais(
     *,
     limite: int | None = None,
+    categorias: tuple[str, ...] = CATEGORIAS_ADICIONAIS,
 ) -> RelatorioNormalizacaoCatalogoDTO:
     """Valida categorias adicionais sem persistir dados."""
 
@@ -163,12 +180,32 @@ def executar_validacao_categorias_adicionais(
             "O limite deve ser maior que zero."
         )
 
+    if not categorias:
+        raise ValueError(
+            "É necessário informar pelo menos uma categoria."
+        )
+
+    if len(categorias) != len(set(categorias)):
+        raise ValueError(
+            "Foram informadas categorias repetidas."
+        )
+
+    categorias_invalidas = (
+        set(categorias) - set(CATEGORIAS_DISPONIVEIS)
+    )
+
+    if categorias_invalidas:
+        raise ValueError(
+            "Categorias não suportadas: "
+            + ", ".join(sorted(categorias_invalidas))
+        )
+    
     print("\nSKINEXA - VALIDACAO DE CATEGORIAS ADICIONAIS")
     print("=" * 50)
 
     relatorios = []
 
-    for categoria in CATEGORIAS_ADICIONAIS:
+    for categoria in categorias:
         print(
             f"\nConsultando categoria: {categoria.upper()}"
         )
@@ -271,6 +308,17 @@ def main() -> int:
     )
 
     parser.add_argument(
+        "--categorias",
+        nargs="+",
+        choices=CATEGORIAS_DISPONIVEIS,
+        default=None,
+        help=(
+            "Categorias a processar. "
+            "Por padrão, utiliza adesivos, caixas e agentes."
+        ),
+    )
+    
+    parser.add_argument(
         "--executar",
         action="store_true",
         help="Habilita a importação no MySQL.",
@@ -284,6 +332,12 @@ def main() -> int:
 
     argumentos = parser.parse_args()
 
+    categorias_selecionadas = (
+        tuple(argumentos.categorias)
+        if argumentos.categorias is not None
+        else CATEGORIAS_ADICIONAIS
+    )
+    
     if (
         argumentos.confirmar_importacao
         and not argumentos.executar
@@ -304,6 +358,7 @@ def main() -> int:
     try:
         relatorio = executar_validacao_categorias_adicionais(
             limite=argumentos.limite,
+            categorias=categorias_selecionadas,
         )
 
         if argumentos.executar:
