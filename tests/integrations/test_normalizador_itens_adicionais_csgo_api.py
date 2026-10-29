@@ -192,3 +192,138 @@ def test_normalizar_item_sem_raridade():
 
     assert item.raridade is None
     assert item.metadados_origem["raridade_origem"] is None
+    
+@pytest.mark.parametrize(
+    "categoria,tipo_item,id_externo,nome_mercado",
+    [
+        (
+            "patches",
+            "patch",
+            "patch-4550",
+            "Patch | Crazy Banana",
+        ),
+        (
+            "chaveiros",
+            "chaveiro",
+            "keychain-1",
+            "Charm | Teste",
+        ),
+        (
+            "grafites",
+            "grafite",
+            "graffiti-1653",
+            "Sealed Graffiti | Blood Boiler",
+        ),
+        (
+            "musicas",
+            "musica",
+            "music_kit-3",
+            "Music Kit | Teste",
+        ),
+        (
+            "colecionaveis",
+            "colecionavel",
+            "collectible-100",
+            "Collectible | Teste",
+        ),
+        (
+            "adesivos_encapsulados",
+            "adesivo_encapsulado",
+            "sticker_slab-100",
+            "Sticker Slab | Teste",
+        ),
+        (
+            "chaves",
+            "chave",
+            "key-1203",
+            "CS:GO Case Key",
+        ),
+        (
+            "destaques",
+            "destaque",
+            "highlight-1",
+            "Souvenir Charm | Teste",
+        ),
+    ],
+)
+
+def test_normalizar_novas_categorias_csgo_api(
+    categoria,
+    tipo_item,
+    id_externo,
+    nome_mercado,
+):
+    """Testa a normalização das oito novas categorias."""
+
+    registro = {
+        "id": id_externo,
+        "name": nome_mercado,
+        "market_hash_name": nome_mercado,
+        "image": "https://exemplo.com/imagem.png",
+        "rarity": {
+            "name": "High Grade",
+        },
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria=categoria,
+    )
+
+    assert item.app_id == 730
+    assert item.nome_mercado == nome_mercado
+    assert item.tipo_item == tipo_item
+    assert item.raridade == "High Grade"
+    assert item.comercializavel is False
+
+    assert item.metadados_origem["id_externo"] == id_externo
+    assert item.metadados_origem["categoria_origem"] == categoria
+
+def test_normalizar_chave_preserva_atributo_marketable():
+    """Preserva a informação de mercado da chave sem inferir comercialização."""
+
+    registro = {
+        "id": "key-1203",
+        "name": "CS:GO Case Key",
+        "market_hash_name": "CS:GO Case Key",
+        "image": "https://exemplo.com/chave.png",
+        "marketable": False,
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria="chaves",
+    )
+
+    assert item.tipo_item == "chave"
+    assert item.comercializavel is False
+    assert item.metadados_origem["marketable"] is False
+
+def test_normalizar_destaque_preserva_metadados_especificos():
+    """Preserva os atributos próprios dos destaques da CSGO-API."""
+
+    registro = {
+        "id": "highlight-1",
+        "name": "Souvenir Charm | Teste",
+        "market_hash_name": "Souvenir Charm | Teste",
+        "image": "https://exemplo.com/destaque.png",
+        "type": "player",
+        "map": {"name": "Mirage"},
+        "video": "https://exemplo.com/video",
+        "tournament_player": {"name": "Jogador Teste"},
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria="destaques",
+    )
+
+    assert item.tipo_item == "destaque"
+    assert item.metadados_origem["type"] == "player"
+    assert item.metadados_origem["map"] == {"name": "Mirage"}
+    assert item.metadados_origem["video"] == (
+        "https://exemplo.com/video"
+    )
+    assert item.metadados_origem["tournament_player"] == {
+        "name": "Jogador Teste"
+    }
