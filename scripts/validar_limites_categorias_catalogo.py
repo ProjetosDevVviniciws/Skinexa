@@ -18,11 +18,18 @@ LIMITES_ITENS = {
     "nome_mercado": 255,
     "nome_exibicao": 255,
     "tipo_item": 50,
+    "raridade": 100,
 }
 
 LIMITES_VARIANTES = {
     "fonte": 50,
     "id_externo": 100,
+}
+
+LIMITES_TEXT = {
+    "descricao": 65535,
+    "url_icone": 65535,
+    "url_icone_grande": 65535,
 }
 
 def validar_limites_categorias_catalogo() -> int:
@@ -57,13 +64,24 @@ def validar_limites_categorias_catalogo() -> int:
             for campo, limite in LIMITES_ITENS.items():
                 valor = getattr(item, campo)
 
-                if len(valor) > limite:
+                if valor is not None and len(valor) > limite:
                     inconsistencias.append(
                         f"{categoria}: {campo} excede "
-                        f"{limite} caracteres: "
-                        f"{item.nome_mercado}"
+                        f"{limite} caracteres: {item.nome_mercado}"
                     )
 
+            for campo, limite in LIMITES_TEXT.items():
+                valor = getattr(item, campo)
+
+                if (
+                    valor is not None
+                    and len(valor.encode("utf-8")) > limite
+                ):
+                    inconsistencias.append(
+                        f"{categoria}: {campo} excede "
+                        f"{limite} bytes: {item.nome_mercado}"
+                    )
+            
             if item.metadados_origem is not None:
                 try:
                     json.dumps(
@@ -87,6 +105,20 @@ def validar_limites_categorias_catalogo() -> int:
                         f"{categoria}: {campo} excede "
                         f"{limite} caracteres: "
                         f"{variante.id_externo}"
+                    )
+                    
+            if variante.nome_variante is not None:
+                if len(variante.nome_variante) > 100:
+                    inconsistencias.append(
+                        f"{categoria}: nome_variante excede "
+                        f"100 caracteres: {variante.id_externo}"
+                    )
+
+            if variante.url_imagem is not None:
+                if len(variante.url_imagem.encode("utf-8")) > 65535:
+                    inconsistencias.append(
+                        f"{categoria}: url_imagem excede "
+                        f"65535 bytes: {variante.id_externo}"
                     )
 
         print(
