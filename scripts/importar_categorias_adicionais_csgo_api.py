@@ -172,6 +172,7 @@ def executar_validacao_categorias_adicionais(
     *,
     limite: int | None = None,
     categorias: tuple[str, ...] = CATEGORIAS_ADICIONAIS,
+    somente_com_identidade: bool = False,
 ) -> RelatorioNormalizacaoCatalogoDTO:
     """Valida categorias adicionais sem persistir dados."""
 
@@ -214,6 +215,19 @@ def executar_validacao_categorias_adicionais(
             categoria
         )
 
+        if somente_com_identidade:
+            registros = [
+                registro
+                for registro in registros
+                if (
+                    isinstance(
+                        registro.get("market_hash_name"),
+                        str,
+                    )
+                    and registro["market_hash_name"].strip()
+                )
+            ]
+  
         if limite is not None:
             registros = registros[:limite]
 
@@ -308,6 +322,15 @@ def main() -> int:
     )
 
     parser.add_argument(
+        "--somente-com-identidade",
+        action="store_true",
+        help=(
+            "Seleciona apenas registros com "
+            "market_hash_name antes de aplicar o limite."
+        ),
+    )
+    
+    parser.add_argument(
         "--categorias",
         nargs="+",
         choices=CATEGORIAS_DISPONIVEIS,
@@ -359,6 +382,7 @@ def main() -> int:
         relatorio = executar_validacao_categorias_adicionais(
             limite=argumentos.limite,
             categorias=categorias_selecionadas,
+            somente_com_identidade=argumentos.somente_com_identidade,
         )
 
         if argumentos.executar:
