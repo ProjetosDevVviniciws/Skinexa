@@ -182,3 +182,177 @@ def test_validacao_busca_todas_as_categorias():
 
     assert resultado.total_normalizados == 3
     assert resultado.total_variantes_normalizadas == 3
+    
+@pytest.mark.parametrize(
+    "categorias,mensagem",
+    [
+        (
+            (),
+            "pelo menos uma categoria",
+        ),
+        (
+            ("patches", "patches"),
+            "categorias repetidas",
+        ),
+        (
+            ("categoria_inexistente",),
+            "Categorias não suportadas",
+        ),
+    ],
+)
+
+def test_validacao_rejeita_categorias_invalidas(
+    categorias,
+    mensagem,
+):
+    """Rejeita seleções vazias, repetidas ou não suportadas."""
+
+    with patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "buscar_itens_csgo_api"
+    ) as mock_buscar:
+        with pytest.raises(
+            ValueError,
+            match=mensagem,
+        ):
+            executar_validacao_categorias_adicionais(
+                categorias=categorias,
+            )
+
+    mock_buscar.assert_not_called()
+
+def test_validacao_processa_somente_categorias_selecionadas():
+    """Consulta e normaliza somente as categorias informadas."""
+
+    registros = [
+        {
+            "id": "patch-4550",
+            "name": "Patch | Crazy Banana",
+            "market_hash_name": "Patch | Crazy Banana",
+            "image": "https://exemplo.com/patch.png",
+        }
+    ]
+
+    with patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "buscar_itens_csgo_api",
+        return_value=registros,
+    ) as mock_buscar, patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "normalizar_lote_itens_adicionais_csgo_api"
+    ) as mock_normalizar:
+
+        mock_normalizar.return_value = criar_relatorio_teste(
+            categoria="patches",
+            nome="Patch | Crazy Banana",
+            id_externo="patch-4550",
+        )
+
+        resultado = executar_validacao_categorias_adicionais(
+            categorias=("patches",),
+        )
+
+    mock_buscar.assert_called_once_with(
+        "patches"
+    )
+
+    mock_normalizar.assert_called_once_with(
+        registros,
+        categoria="patches",
+    )
+
+    assert resultado.total_normalizados == 1
+    assert resultado.total_variantes_normalizadas == 1
+
+def test_validacao_filtra_identidade_antes_do_limite():
+    """Seleciona registros com identidade antes de aplicar o limite."""
+
+    registros = [
+        {
+            "id": "collectible-1",
+            "name": "Item sem identidade",
+            "market_hash_name": None,
+            "image": "https://exemplo.com/1.png",
+        },
+        {
+            "id": "collectible-2",
+            "name": "Operation Test Pass",
+            "market_hash_name": "Operation Test Pass",
+            "image": "https://exemplo.com/2.png",
+        },
+        {
+            "id": "collectible-3",
+            "name": "Operation Other Pass",
+            "market_hash_name": "Operation Other Pass",
+            "image": "https://exemplo.com/3.png",
+        },
+    ]
+
+    with patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "buscar_itens_csgo_api",
+        return_value=registros,
+    ), patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "normalizar_lote_itens_adicionais_csgo_api"
+    ) as mock_normalizar:
+
+        mock_normalizar.return_value = criar_relatorio_teste(
+            categoria="colecionaveis",
+            nome="Operation Test Pass",
+            id_externo="collectible-2",
+        )
+
+        executar_validacao_categorias_adicionais(
+            categorias=("colecionaveis",),
+            limite=1,
+            somente_com_identidade=True,
+        )
+
+    registros_recebidos = mock_normalizar.call_args.args[0]
+
+    assert len(registros_recebidos) == 1
+    assert registros_recebidos[0]["id"] == "collectible-2"
+
+def test_validacao_sem_filtro_preserva_comportamento():
+    """Mantém a seleção original quando o filtro não está habilitado."""
+
+    registros = [
+        {
+            "id": "collectible-1",
+            "name": "Item sem identidade",
+            "market_hash_name": None,
+            "image": "https://exemplo.com/1.png",
+        },
+        {
+            "id": "collectible-2",
+            "name": "Operation Test Pass",
+            "market_hash_name": "Operation Test Pass",
+            "image": "https://exemplo.com/2.png",
+        },
+    ]
+
+    with patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "buscar_itens_csgo_api",
+        return_value=registros,
+    ), patch(
+        "scripts.importar_categorias_adicionais_csgo_api."
+        "normalizar_lote_itens_adicionais_csgo_api"
+    ) as mock_normalizar:
+
+        mock_normalizar.return_value = criar_relatorio_teste(
+            categoria="colecionaveis",
+            nome="Operation Test Pass",
+            id_externo="collectible-2",
+        )
+
+        executar_validacao_categorias_adicionais(
+            categorias=("colecionaveis",),
+            limite=1,
+        )
+
+    registros_recebidos = mock_normalizar.call_args.args[0]
+
+    assert len(registros_recebidos) == 1
+    assert registros_recebidos[0]["id"] == "collectible-1"
