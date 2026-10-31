@@ -16,6 +16,8 @@ class RegistroPendenteCatalogoDTO:
     id_externo: str
     nome_exibicao: str
 
+    motivo: str = "sem_identidade_comercial"
+     
 @dataclass(frozen=True, slots=True)
 class ErroNormalizacaoItemAdicionalDTO:
     """Representa uma falha na normalização de um registro."""
