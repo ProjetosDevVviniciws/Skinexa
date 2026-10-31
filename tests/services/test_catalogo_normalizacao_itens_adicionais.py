@@ -284,3 +284,35 @@ def test_normalizar_lote_rejeita_id_externo_com_vinculos_diferentes():
     )
 
     assert relatorio.variantes[0].nome_mercado == "Agente A"
+    
+def test_normalizacao_classifica_chave_nao_comercializavel():
+    """Classifica como não comercializável uma chave restrita pela fonte."""
+
+    registros = [
+        {
+            "id": "key-1384",
+            "name": "Shattered Web Case Key",
+            "market_hash_name": None,
+            "image": "https://exemplo.com/chave.png",
+            "marketable": False,
+        }
+    ]
+
+    relatorio = normalizar_lote_itens_adicionais_csgo_api(
+        registros,
+        categoria="chaves",
+    )
+
+    assert relatorio.total_recebidos == 1
+    assert relatorio.total_normalizados == 0
+    assert relatorio.total_sem_identidade_comercial == 1
+    assert relatorio.total_rejeitados == 0
+
+    assert len(relatorio.pendentes) == 1
+
+    assert (
+        relatorio.pendentes[0].motivo
+        == "nao_comercializavel_fonte"
+    )
+
+    assert relatorio.variantes == ()
