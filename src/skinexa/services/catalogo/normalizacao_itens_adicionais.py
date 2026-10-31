@@ -15,6 +15,10 @@ from skinexa.integrations.catalogo.normalizador_itens_adicionais_csgo_api import
     normalizar_item_adicional_csgo_api,
 )
 
+from skinexa.services.catalogo.classificacao_pendencias import (
+    classificar_pendencia_catalogo,
+)
+
 from skinexa.integrations.catalogo.normalizador_variantes_itens_adicionais_csgo_api import (
     ErroNormalizacaoVarianteAdicionalCSGOAPI,
     normalizar_variante_item_adicional_csgo_api,
@@ -74,6 +78,9 @@ def normalizar_lote_itens_adicionais_csgo_api(
                         indice=indice,
                         id_externo=identificador,
                         nome_exibicao=nome,
+                        motivo = classificar_pendencia_catalogo(
+                            registro
+                        ),
                     )
                 )
 
