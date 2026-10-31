@@ -5,7 +5,6 @@ from collections import Counter
 from typing import Any
 
 from skinexa.integrations.catalogo.csgo_api_client import (
-    ARQUIVOS_CATALOGO,
     buscar_itens_csgo_api,
 )
 
@@ -26,6 +25,11 @@ CATEGORIAS_AUDITORIA = (
     "adesivos_encapsulados",
     "chaves",
     "destaques",
+    "armas_base",
+    "pets",
+)
+
+CATEGORIAS_FORA_ESCOPO_COMERCIAL = (
     "armas_base",
     "pets",
 )
@@ -423,6 +427,7 @@ def main() -> int:
     total_registros = 0
     total_com_nome_mercado = 0
     total_sem_nome_mercado = 0
+    total_fora_escopo = 0
 
     for categoria in CATEGORIAS_AUDITORIA:
         registros = buscar_itens_csgo_api(
@@ -436,6 +441,23 @@ def main() -> int:
 
         total_registros += len(registros)
 
+        if categoria in CATEGORIAS_FORA_ESCOPO_COMERCIAL:
+            total_fora_escopo += len(registros)
+
+            print("\nCLASSIFICACAO COMERCIAL")
+            print("-" * 50)
+            print(
+                "Categoria fora do escopo comercial "
+                "do Skinexa."
+            )
+
+            print(
+                f"Registros excluidos das pendencias: "
+                f"{len(registros)}"
+            )
+
+            continue
+        
         for registro in registros:
             nome_mercado = registro.get(
                 "market_hash_name"
@@ -485,6 +507,21 @@ def main() -> int:
         f"{total_sem_nome_mercado}"
     )
 
+    print(
+        "Registros fora do escopo comercial: "
+        f"{total_fora_escopo}"
+    )
+    
+    if total_registros != (
+        total_com_nome_mercado
+        + total_sem_nome_mercado
+        + total_fora_escopo
+    ):
+        raise RuntimeError(
+            "A classificação das categorias apresentou "
+            "inconsistências."
+        )
+    
     print("\nAUDITORIA CONCLUIDA")
     print("-" * 50)
 
