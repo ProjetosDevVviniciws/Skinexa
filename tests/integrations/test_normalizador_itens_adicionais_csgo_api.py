@@ -327,3 +327,97 @@ def test_normalizar_destaque_preserva_metadados_especificos():
     assert item.metadados_origem["tournament_player"] == {
         "name": "Jogador Teste"
     }
+    
+def test_normalizar_musica_preserva_atributo_exclusive():
+    """Preserva a exclusividade informada pela CSGO-API."""
+
+    registro = {
+        "id": "music_kit-40",
+        "name": "Music Kit | Teste Exclusivo",
+        "market_hash_name": "Music Kit | Teste Exclusivo",
+        "image": "https://exemplo.com/musica.png",
+        "exclusive": True,
+        "rarity": {
+            "name": "High Grade",
+        },
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria="musicas",
+    )
+
+    assert item.tipo_item == "musica"
+    assert item.raridade == "High Grade"
+    assert item.metadados_origem["exclusive"] is True
+    
+def test_normalizar_colecionavel_preserva_atributo_genuine():
+    """Preserva a classificação Genuine de um colecionável."""
+
+    registro = {
+        "id": "collectible-6001",
+        "name": "Genuine Pin | Teste",
+        "market_hash_name": "Genuine Pin | Teste",
+        "image": "https://exemplo.com/pin.png",
+        "type": "Pin",
+        "genuine": True,
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria="colecionaveis",
+    )
+
+    assert item.tipo_item == "colecionavel"
+    assert item.metadados_origem["type"] == "Pin"
+    assert item.metadados_origem["genuine"] is True
+    
+def test_normalizar_grafite_preserva_atributo_tint():
+    """Preserva o identificador de cor dos grafites."""
+
+    registro = {
+        "id": "graffiti-100",
+        "name": "Sealed Graffiti | Teste",
+        "market_hash_name": "Sealed Graffiti | Teste",
+        "image": "https://exemplo.com/grafite.png",
+        "tint": {
+            "id": "teste",
+            "name": "Cor de Teste",
+        },
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria="grafites",
+    )
+
+    assert item.tipo_item == "grafite"
+    assert item.metadados_origem["tint"] == {
+        "id": "teste",
+        "name": "Cor de Teste",
+    }
+    
+def test_normalizar_caixa_preserva_atributos_especificos():
+    """Preserva atributos próprios de contêineres da CSGO-API."""
+
+    registro = {
+        "id": "crate-100",
+        "name": "Caixa de Teste",
+        "market_hash_name": "Caixa de Teste",
+        "image": "https://exemplo.com/caixa.png",
+        "first_sale_date": "2026-01-01",
+        "rental": False,
+        "model_player": None,
+    }
+
+    item = normalizar_item_adicional_csgo_api(
+        registro,
+        categoria="caixas",
+    )
+
+    assert item.tipo_item == "caixa"
+    assert item.metadados_origem["first_sale_date"] == (
+        "2026-01-01"
+    )
+    assert item.metadados_origem["rental"] is False
+    assert item.metadados_origem["model_player"] is None
