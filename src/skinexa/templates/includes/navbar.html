@@ -1,0 +1,106 @@
+<header class="site-header">
+    <nav
+        class="navbar navbar-expand-md site-navbar"
+        aria-label="Navegação principal"
+    >
+        <div class="app-container site-navbar-container">
+
+            <a
+                class="navbar-brand site-brand"
+                href="{{ url_for('home.index') }}"
+                aria-label="Skinexa — Página inicial"
+            >
+                <img
+                    src="{{ url_for('static', filename='images/logo.png') }}"
+                    alt="Skinexa"
+                    class="site-brand-logo"
+                >
+            </a>
+
+            <button
+                class="navbar-toggler site-navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#skinexa-navbar"
+                aria-controls="skinexa-navbar"
+                aria-expanded="false"
+                aria-label="Abrir menu de navegação"
+            >
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div
+                class="collapse navbar-collapse site-navbar-collapse"
+                id="skinexa-navbar"
+            >
+                <ul class="navbar-nav site-nav-links">
+                    <li class="nav-item">
+                        <a
+                            class="nav-link site-nav-link
+                            {% if request.endpoint == 'mercado.index' %}
+                                is-active
+                            {% endif %}"
+                            href="{{ url_for('mercado.index') }}"
+                            {% if request.endpoint == 'mercado.index' %}
+                                aria-current="page"
+                            {% endif %}
+                        >
+                            Mercado
+                        </a>
+                    </li>
+
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a
+                                class="nav-link site-nav-link
+                                {% if request.endpoint == 'dashboard.index' %}
+                                    is-active
+                                {% endif %}"
+                                href="{{ url_for('dashboard.index') }}"
+                                {% if request.endpoint == 'dashboard.index' %}
+                                    aria-current="page"
+                                {% endif %}
+                            >
+                                Dashboard
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+
+                <div class="site-nav-account">
+                    {% if current_user.is_authenticated %}
+                        <span class="site-user-name">
+                            {{ current_user.nome_exibicao }}
+                        </span>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('auth.logout') }}"
+                            class="site-logout-form"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <button
+                                type="submit"
+                                class="site-logout-button"
+                            >
+                                Sair
+                            </button>
+                        </form>
+                    {% else %}
+                        <a
+                            href="{{ url_for('auth.login') }}"
+                            class="site-steam-button"
+                        >
+                            Entrar com Steam
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
