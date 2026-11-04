@@ -1,0 +1,190 @@
+.site-header {
+    position: relative;
+    z-index: 100;
+
+    background: var(--color-background);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.site-navbar {
+    min-height: var(--header-height);
+    padding-block: 0.625rem;
+}
+
+.site-navbar-container {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.site-brand {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.site-brand-logo {
+    display: block;
+    width: auto;
+    height: 34px;
+    max-width: 175px;
+    object-fit: contain;
+}
+
+.site-navbar-collapse {
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.site-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.site-nav-link {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 40px;
+    padding: 0.625rem 0.875rem !important;
+
+    border-radius: var(--radius-md);
+
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    transition:
+        color var(--transition-fast),
+        background var(--transition-fast);
+}
+
+.site-nav-link:hover,
+.site-nav-link:focus-visible {
+    color: var(--color-text);
+    background: var(--color-surface-hover);
+}
+
+.site-nav-link.is-active {
+    color: #ffffff;
+    background: var(--color-primary);
+}
+
+.site-nav-account {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.site-user-name {
+    max-width: 180px;
+    overflow: hidden;
+
+    color: var(--color-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.site-logout-form {
+    margin: 0;
+}
+
+.site-logout-button,
+.site-steam-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 40px;
+    padding: 0.625rem 1rem;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+
+    color: var(--color-text);
+    background: var(--color-surface);
+
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+
+    cursor: pointer;
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast);
+}
+
+.site-logout-button:hover,
+.site-steam-button:hover {
+    color: #ffffff;
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
+}
+
+.site-steam-button {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.site-steam-button:hover {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.site-navbar-toggler {
+    margin-left: auto;
+    border-color: var(--color-border);
+    box-shadow: none !important;
+}
+
+.site-navbar-toggler:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
+@media (max-width: 767.98px) {
+    .site-navbar-container {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .site-brand-logo {
+        height: 30px;
+        max-width: 150px;
+    }
+
+    .site-navbar-collapse {
+        flex-basis: 100%;
+        width: 100%;
+        padding-top: 0.75rem;
+    }
+
+    .site-nav-links {
+        align-items: stretch;
+        gap: 0.375rem;
+    }
+
+    .site-nav-link {
+        width: 100%;
+    }
+
+    .site-nav-account {
+        justify-content: space-between;
+        flex-wrap: wrap;
+
+        margin-top: 1rem;
+        padding-top: 1rem;
+
+        border-top: 1px solid var(--color-border);
+    }
+
+    .site-user-name {
+        max-width: 65%;
+    }
+}
