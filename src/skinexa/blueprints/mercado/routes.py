@@ -3,6 +3,7 @@ from flask import (
     jsonify,
     render_template,
     request,
+    abort,
 )
 
 from skinexa.blueprints.mercado.serializers import (
@@ -12,11 +13,16 @@ from skinexa.blueprints.mercado.serializers import (
 from skinexa.database.connection import engine
 
 from skinexa.services.catalogo.pesquisa import (
+    LIMITE_MAXIMO_ITENS_POR_PAGINA,
     listar_itens_paginados,
 )
 
 from skinexa.services.precos.consulta import (
     consultar_comparacao_precos,
+)
+
+from skinexa.database.queries.itens_catalogo import (
+    ORDENACOES_CATALOGO,
 )
 
 mercado_bp = Blueprint(
@@ -28,7 +34,7 @@ mercado_bp = Blueprint(
 @mercado_bp.get("/")
 def index():
     """Renderiza a página principal do mercado."""
-
+    
     pagina = request.args.get(
         "pagina",
         default=1,
@@ -47,6 +53,14 @@ def index():
         type=str,
     )
 
+    if (
+            pagina < 1
+            or por_pagina < 1
+            or por_pagina > LIMITE_MAXIMO_ITENS_POR_PAGINA
+            or ordenacao not in ORDENACOES_CATALOGO
+        ):
+            abort(400)
+    
     with engine.connect() as conexao:
         resultado = listar_itens_paginados(
             conexao,
