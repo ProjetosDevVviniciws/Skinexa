@@ -1,0 +1,199 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+    Mercado | Skinexa
+{% endblock %}
+
+{% block styles %}
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/pages/mercado.css') }}"
+    >
+{% endblock %}
+
+{% block content %}
+<section class="market">
+    <header class="market-header">
+        <h1>Mercado</h1>
+
+        <p>
+            Consulte itens e compare preços
+            entre diferentes marketplaces.
+        </p>
+    </header>
+
+    <div class="market-results">
+        <div class="market-results-header">
+            <p class="market-results-count">
+                {{ resultado.total_itens }}
+                item(ns) encontrado(s).
+            </p>
+
+            <form
+                method="GET"
+                action="{{ url_for('mercado.index') }}"
+                class="market-sort"
+            >
+                <input
+                    type="hidden"
+                    name="por_pagina"
+                    value="{{ resultado.por_pagina }}"
+                >
+
+                <label for="market-order">
+                    Ordenar por
+                </label>
+
+                <select
+                    id="market-order"
+                    name="ordenacao"
+                >
+                    <option
+                        value="nome_asc"
+                        {% if ordenacao == "nome_asc" %}selected{% endif %}
+                    >
+                        Nome: A–Z
+                    </option>
+
+                    <option
+                        value="nome_desc"
+                        {% if ordenacao == "nome_desc" %}selected{% endif %}
+                    >
+                        Nome: Z–A
+                    </option>
+
+                    <option
+                        value="mais_recentes"
+                        {% if ordenacao == "mais_recentes" %}selected{% endif %}
+                    >
+                        Adicionados recentemente
+                    </option>
+
+                    <option
+                        value="mais_antigos"
+                        {% if ordenacao == "mais_antigos" %}selected{% endif %}
+                    >
+                        Adicionados há mais tempo
+                    </option>
+                </select>
+
+                <button type="submit">
+                    Aplicar
+                </button>
+            </form>
+
+            <p class="market-results-page">
+                Página {{ resultado.pagina }}
+                de {{ resultado.total_paginas }}.
+            </p>
+        </div>
+
+        {% if resultado.itens %}
+            <div class="market-grid">
+                {% for item in resultado.itens %}
+                    <article class="market-card">
+                        <a
+                            href="{{ url_for('mercado.item', item_catalogo_id=item.id) }}"
+                            class="market-card-link"
+                        >
+                            <div class="market-card-image">
+                                {% if item.url_icone_grande or item.url_icone %}
+                                    <img
+                                        src="{{ item.url_icone_grande or item.url_icone }}"
+                                        alt="{{ item.nome_exibicao }}"
+                                        loading="lazy"
+                                    >
+                                {% else %}
+                                    <span class="market-card-no-image">
+                                        Imagem indisponível
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="market-card-content">
+                                <span class="market-card-type">
+                                    {{ item.tipo_item }}
+                                </span>
+
+                                <h2 class="market-card-title">
+                                    {{ item.nome_exibicao }}
+                                </h2>
+
+                                {% if item.nome_arma %}
+                                    <p class="market-card-detail">
+                                        Arma: {{ item.nome_arma }}
+                                    </p>
+                                {% endif %}
+
+                                {% if item.estado_exterior %}
+                                    <p class="market-card-detail">
+                                        Exterior: {{ item.estado_exterior }}
+                                    </p>
+                                {% endif %}
+
+                                {% if item.raridade %}
+                                    <p class="market-card-detail">
+                                        Raridade: {{ item.raridade }}
+                                    </p>
+                                {% endif %}
+
+                                {% if item.variante_stattrak %}
+                                    <span class="market-card-tag">
+                                        StatTrak™
+                                    </span>
+                                {% endif %}
+
+                                {% if item.variante_souvenir %}
+                                    <span class="market-card-tag">
+                                        Souvenir
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if resultado.total_paginas > 1 %}
+            <nav
+                class="market-pagination"
+                aria-label="Paginação dos itens do mercado"
+            >
+                {% if resultado.tem_anterior %}
+                    <a
+                        href="{{ url_for(
+                            'mercado.index',
+                            pagina=resultado.pagina - 1,
+                            por_pagina=resultado.por_pagina,
+                            ordenacao=ordenacao
+                        ) }}"
+                        class="market-pagination-link"
+                    >
+                        Anterior
+                    </a>
+                {% endif %}
+
+                <span class="market-pagination-current">
+                    Página {{ resultado.pagina }}
+                    de {{ resultado.total_paginas }}
+                </span>
+
+                {% if resultado.tem_proxima %}
+                    <a
+                        href="{{ url_for(
+                            'mercado.index',
+                            pagina=resultado.pagina + 1,
+                            por_pagina=resultado.por_pagina,
+                            ordenacao=ordenacao
+                        ) }}"
+                        class="market-pagination-link"
+                    >
+                        Próxima
+                    </a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
