@@ -9,6 +9,7 @@ from skinexa.blueprints.auth.routes import auth_bp
 from skinexa.blueprints.dashboard.routes import dashboard_bp
 from skinexa.blueprints.mercado.routes import mercado_bp
 from skinexa.core.errors import registrar_tratadores_erros
+from skinexa.utils.raridades import obter_cor_raridade
 
 mimetypes.add_type(
     "text/javascript",
@@ -20,6 +21,11 @@ def create_app(
 ) -> Flask:
     """Cria e configura a aplicação Flask."""
     app = Flask(__name__)
+    
+    app.add_template_filter(
+        obter_cor_raridade,
+        "cor_raridade",
+    )
     
     _configurar_app(app, config_class)
     _inicializar_extensoes(app)
