@@ -28,8 +28,8 @@
 .site-brand-logo {
     display: block;
     width: auto;
-    height: 34px;
-    max-width: 175px;
+    height: 54px;
+    max-width: 260px;
     object-fit: contain;
 }
 
@@ -149,19 +149,53 @@
 }
 
 @media (max-width: 767.98px) {
-    .site-navbar-container {
-        flex-wrap: wrap;
-        gap: 0.75rem;
+    .site-navbar {
+        align-items: flex-start;
     }
 
-    .site-brand-logo {
-        height: 30px;
-        max-width: 150px;
+    .site-navbar-container {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: 56px auto;
+
+        align-items: center;
+        align-content: start;
+
+        column-gap: 0.75rem;
+        row-gap: 0;
+
+        align-self: flex-start;
+    }
+
+    .site-brand {
+        grid-column: 1;
+        grid-row: 1;
+
+        justify-self: start;
+        align-self: center;
+    }
+
+    .site-navbar-toggler {
+        grid-column: 2;
+        grid-row: 1;
+
+        justify-self: end;
+        align-self: center;
+
+        margin-left: 0;
     }
 
     .site-navbar-collapse {
-        flex-basis: 100%;
+        grid-column: 1 / -1;
+        grid-row: 2;
+
         width: 100%;
+        min-width: 0;
+        padding-top: 0;
+    }
+
+    .site-navbar-collapse.show,
+    .site-navbar-collapse.collapsing {
         padding-top: 0.75rem;
     }
 
