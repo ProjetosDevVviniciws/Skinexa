@@ -12,22 +12,33 @@
 {% endblock %}
 
 {% block content %}
-<section class="market">
+<section class="market" aria-labelledby="market-title">
+
     <header class="market-header">
-        <h1>Mercado</h1>
+        <h1 id="market-title">Mercado</h1>
 
         <p>
-            Consulte itens e compare preços
-            entre diferentes marketplaces.
+            Explore o catálogo de itens do Counter-Strike 2
+            e consulte suas informações de mercado.
         </p>
     </header>
 
     <div class="market-results">
+
         <div class="market-results-header">
-            <p class="market-results-count">
-                {{ resultado.total_itens }}
-                item(ns) encontrado(s).
-            </p>
+            <div class="market-results-info">
+                <p class="market-results-count">
+                    <strong>{{ resultado.total_itens }}</strong>
+                    itens encontrados
+                </p>
+
+                {% if resultado.total_paginas > 0 %}
+                    <p class="market-results-page">
+                        Página {{ resultado.pagina }}
+                        de {{ resultado.total_paginas }}
+                    </p>
+                {% endif %}
+            </div>
 
             <form
                 method="GET"
@@ -81,27 +92,62 @@
                     Aplicar
                 </button>
             </form>
+        </div>
 
-            <p class="market-results-page">
-                Página {{ resultado.pagina }}
-                de {{ resultado.total_paginas }}.
+        <div
+            id="market-loading"
+            class="market-loading"
+            role="status"
+            aria-live="polite"
+            aria-label="Carregando itens do mercado"
+            hidden
+        >
+            <p class="market-loading-message">
+                Carregando itens do mercado...
             </p>
+
+            <div class="market-loading-grid" aria-hidden="true">
+                {% for indice in range(10) %}
+                    <div class="market-skeleton">
+                        <div class="market-skeleton-image"></div>
+
+                        <div class="market-skeleton-content">
+                            <div class="market-skeleton-line is-short"></div>
+                            <div class="market-skeleton-line"></div>
+                            <div class="market-skeleton-line is-medium"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
 
         {% if resultado.itens %}
             <div class="market-grid">
                 {% for item in resultado.itens %}
-                    <article class="market-card">
+                    {% set cor_raridade = item.raridade | cor_raridade %}
+
+                    <article
+                        class="market-card"
+                        {% if cor_raridade %}
+                            style="--rarity-color: {{ cor_raridade }};"
+                        {% endif %}
+                    >
+
                         <a
-                            href="{{ url_for('mercado.item', item_catalogo_id=item.id) }}"
                             class="market-card-link"
+                            href="{{ url_for(
+                                'mercado.item',
+                                item_catalogo_id=item.id
+                            ) }}"
+                            aria-label="Ver detalhes de {{ item.nome_exibicao }}"
                         >
                             <div class="market-card-image">
                                 {% if item.url_icone_grande or item.url_icone %}
                                     <img
                                         src="{{ item.url_icone_grande or item.url_icone }}"
-                                        alt="{{ item.nome_exibicao }}"
+                                        alt=""
                                         loading="lazy"
+                                        decoding="async"
                                     >
                                 {% else %}
                                     <span class="market-card-no-image">
@@ -111,45 +157,68 @@
                             </div>
 
                             <div class="market-card-content">
+
                                 <span class="market-card-type">
-                                    {{ item.tipo_item }}
+                                    {{ item.tipo_item | replace('_', ' ') }}
                                 </span>
 
                                 <h2 class="market-card-title">
                                     {{ item.nome_exibicao }}
                                 </h2>
 
-                                {% if item.nome_arma %}
-                                    <p class="market-card-detail">
-                                        Arma: {{ item.nome_arma }}
-                                    </p>
-                                {% endif %}
+                                {% if item.nome_arma
+                                    or item.nome_acabamento
+                                    or item.estado_exterior %}
+                                    <div class="market-card-details">
 
-                                {% if item.estado_exterior %}
-                                    <p class="market-card-detail">
-                                        Exterior: {{ item.estado_exterior }}
-                                    </p>
+                                        {% if item.nome_arma %}
+                                            <span>{{ item.nome_arma }}</span>
+                                        {% endif %}
+
+                                        {% if item.nome_acabamento %}
+                                            <span>{{ item.nome_acabamento }}</span>
+                                        {% endif %}
+
+                                        {% if item.estado_exterior %}
+                                            <span>{{ item.estado_exterior }}</span>
+                                        {% endif %}
+
+                                    </div>
                                 {% endif %}
 
                                 {% if item.raridade %}
-                                    <p class="market-card-detail">
-                                        Raridade: {{ item.raridade }}
+                                    <p class="market-card-rarity">
+                                        <span
+                                            class="market-card-rarity-dot"
+                                            aria-hidden="true"
+                                        ></span>
+
+                                        {{ item.raridade }}
                                     </p>
                                 {% endif %}
 
-                                {% if item.variante_stattrak %}
-                                    <span class="market-card-tag">
-                                        StatTrak™
-                                    </span>
+                                {% if item.variante_stattrak
+                                    or item.variante_souvenir %}
+                                    <div class="market-card-tags">
+
+                                        {% if item.variante_stattrak %}
+                                            <span class="market-card-tag market-card-tag-stattrak">
+                                                StatTrak™
+                                            </span>
+                                        {% endif %}
+
+                                        {% if item.variante_souvenir %}
+                                            <span class="market-card-tag market-card-tag-souvenir">
+                                                Souvenir
+                                            </span>
+                                        {% endif %}
+
+                                    </div>
                                 {% endif %}
 
-                                {% if item.variante_souvenir %}
-                                    <span class="market-card-tag">
-                                        Souvenir
-                                    </span>
-                                {% endif %}
                             </div>
                         </a>
+
                     </article>
                 {% endfor %}
             </div>
@@ -162,38 +231,59 @@
             >
                 {% if resultado.tem_anterior %}
                     <a
+                        class="market-pagination-link"
                         href="{{ url_for(
                             'mercado.index',
                             pagina=resultado.pagina - 1,
                             por_pagina=resultado.por_pagina,
                             ordenacao=ordenacao
                         ) }}"
-                        class="market-pagination-link"
                     >
                         Anterior
                     </a>
+                {% else %}
+                    <span
+                        class="market-pagination-link is-disabled"
+                        aria-disabled="true"
+                    >
+                        Anterior
+                    </span>
                 {% endif %}
 
                 <span class="market-pagination-current">
-                    Página {{ resultado.pagina }}
+                    {{ resultado.pagina }}
                     de {{ resultado.total_paginas }}
                 </span>
 
                 {% if resultado.tem_proxima %}
                     <a
+                        class="market-pagination-link market-pagination-next"
                         href="{{ url_for(
                             'mercado.index',
                             pagina=resultado.pagina + 1,
                             por_pagina=resultado.por_pagina,
                             ordenacao=ordenacao
                         ) }}"
-                        class="market-pagination-link"
                     >
                         Próxima
                     </a>
+                {% else %}
+                    <span
+                        class="market-pagination-link is-disabled"
+                        aria-disabled="true"
+                    >
+                        Próxima
+                    </span>
                 {% endif %}
             </nav>
         {% endif %}
+
     </div>
 </section>
+{% endblock %}
+{% block scripts %}
+    <script
+        src="{{ url_for('static', filename='js/pages/mercado.js') }}"
+        defer
+    ></script>
 {% endblock %}
