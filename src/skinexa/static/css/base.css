@@ -30,7 +30,7 @@
 
     /* Espaçamentos e dimensões */
     --layout-max-width: 1440px;
-    --header-height: 64px;
+    --header-height: 80px;
 
     --radius-sm: 6px;
     --radius-md: 10px;
@@ -44,6 +44,7 @@
 
 html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
 }
 
 body {
