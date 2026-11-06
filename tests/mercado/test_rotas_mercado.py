@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from unittest.mock import Mock, patch
 
+from types import SimpleNamespace
+
 from skinexa.domain.comparacao_preco import (
     PrecoComparacao,
 )
@@ -296,4 +298,168 @@ def test_mercado_index_parametros_nao_numericos(
         pagina=1,
         por_pagina=20,
         ordenacao="nome_asc",
+    )    
+
+@patch(
+    "skinexa.blueprints.mercado.routes."
+    "listar_itens_paginados",
+)
+@patch(
+    "skinexa.blueprints.mercado.routes.engine",
+)
+
+def test_mercado_api_retorna_itens_paginados(
+    mock_engine,
+    mock_listar_itens,
+    client,
+):
+    """Retorna itens reais do serviço no contrato JSON do Mercado."""
+
+    conexao = Mock()
+
+    mock_engine.connect.return_value.__enter__ = Mock(
+        return_value=conexao,
     )
+    mock_engine.connect.return_value.__exit__ = Mock(
+        return_value=False,
+    )
+
+    item = SimpleNamespace(
+        id=153,
+        nome_exibicao="AK-47 | Teste",
+        tipo_item="skin",
+        nome_arma="AK-47",
+        nome_acabamento="Teste",
+        estado_exterior="Factory New",
+        raridade="Covert",
+        url_icone=None,
+        url_icone_grande="https://exemplo.com/item.png",
+        variante_stattrak=True,
+        variante_souvenir=False,
+    )
+
+    mock_listar_itens.return_value = PaginaItensCatalogoDTO(
+        itens=[item],
+        pagina=2,
+        por_pagina=20,
+        total_itens=45,
+        total_paginas=3,
+        tem_anterior=True,
+        tem_proxima=True,
+    )
+
+    resposta = client.get(
+        "/mercado/itens"
+        "?pagina=2&ordenacao=mais_recentes"
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["ordenacao"] == "mais_recentes"
+    assert dados["paginacao"] == {
+        "pagina": 2,
+        "por_pagina": 20,
+        "total_itens": 45,
+        "total_paginas": 3,
+        "tem_anterior": True,
+        "tem_proxima": True,
+    }
+
+    assert dados["itens"] == [
+        {
+            "id": 153,
+            "nome_exibicao": "AK-47 | Teste",
+            "tipo_item": "skin",
+            "nome_arma": "AK-47",
+            "nome_acabamento": "Teste",
+            "estado_exterior": "Factory New",
+            "raridade": "Covert",
+            "cor_raridade": "#EB4B4B",
+            "url_icone": None,
+            "url_icone_grande": (
+                "https://exemplo.com/item.png"
+            ),
+            "variante_stattrak": True,
+            "variante_souvenir": False,
+            "url_detalhes": "/mercado/item/153",
+        }
+    ]
+
+    mock_listar_itens.assert_called_once_with(
+        conexao,
+        pagina=2,
+        por_pagina=20,
+        ordenacao="mais_recentes",
+    )
+
+@patch(
+    "skinexa.blueprints.mercado.routes."
+    "listar_itens_paginados",
+)
+@patch(
+    "skinexa.blueprints.mercado.routes.engine",
+)
+
+def test_mercado_api_retorna_lista_vazia(
+    mock_engine,
+    mock_listar_itens,
+    client,
+):
+    """Retorna uma resposta válida quando não existem itens."""
+
+    conexao = Mock()
+
+    mock_engine.connect.return_value.__enter__ = Mock(
+        return_value=conexao,
+    )
+    mock_engine.connect.return_value.__exit__ = Mock(
+        return_value=False,
+    )
+
+    mock_listar_itens.return_value = PaginaItensCatalogoDTO(
+        itens=[],
+        pagina=1,
+        por_pagina=20,
+        total_itens=0,
+        total_paginas=0,
+        tem_anterior=False,
+        tem_proxima=False,
+    )
+
+    resposta = client.get("/mercado/itens")
+
+    assert resposta.status_code == 200
+
+    dados = resposta.get_json()
+
+    assert dados["itens"] == []
+    assert dados["paginacao"]["total_itens"] == 0
+    assert dados["paginacao"]["total_paginas"] == 0
+
+@patch(
+    "skinexa.blueprints.mercado.routes."
+    "listar_itens_paginados",
+)
+
+def test_mercado_api_rejeita_ordenacao_invalida(
+    mock_listar_itens,
+    client,
+):
+    """Rejeita ordenações desconhecidas antes de consultar o banco."""
+
+    resposta = client.get(
+        "/mercado/itens?ordenacao=invalida"
+    )
+
+    assert resposta.status_code == 400
+    assert resposta.is_json
+
+    dados = resposta.get_json()
+
+    assert dados["sucesso"] is False
+    assert "inválidos" in dados["mensagem"]
+
+    mock_listar_itens.assert_not_called()
