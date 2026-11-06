@@ -23,7 +23,10 @@
         </p>
     </header>
 
-    <div class="market-results">
+    <div
+        class="market-results"
+        data-market-api-url="{{ url_for('mercado.listar_itens_json') }}"
+    >
 
         <div class="market-results-header">
             <div class="market-results-info">
