@@ -7,6 +7,7 @@ from flask import (
 )
 
 from skinexa.blueprints.mercado.serializers import (
+    serializar_pagina_mercado,
     serializar_preco_comparacao,
 )
 
@@ -73,6 +74,59 @@ def index():
         "mercado/index.html",
         resultado=resultado,
         ordenacao=ordenacao,
+    )
+
+@mercado_bp.get("/itens")
+def listar_itens_json():
+    """Retorna itens paginados do Mercado em formato JSON."""
+
+    pagina = request.args.get(
+        "pagina",
+        default=1,
+        type=int,
+    )
+
+    por_pagina = request.args.get(
+        "por_pagina",
+        default=20,
+        type=int,
+    )
+
+    ordenacao = request.args.get(
+        "ordenacao",
+        default="nome_asc",
+        type=str,
+    )
+
+    if (
+        pagina < 1
+        or por_pagina < 1
+        or por_pagina > LIMITE_MAXIMO_ITENS_POR_PAGINA
+        or ordenacao not in ORDENACOES_CATALOGO
+    ):
+        return jsonify(
+            {
+                "sucesso": False,
+                "mensagem": (
+                    "Parâmetros de paginação ou "
+                    "ordenação inválidos."
+                ),
+            }
+        ), 400
+
+    with engine.connect() as conexao:
+        resultado = listar_itens_paginados(
+            conexao,
+            pagina=pagina,
+            por_pagina=por_pagina,
+            ordenacao=ordenacao,
+        )
+
+    return jsonify(
+        serializar_pagina_mercado(
+            resultado,
+            ordenacao=ordenacao,
+        )
     )
 
 @mercado_bp.get("/item/<int:item_catalogo_id>")
