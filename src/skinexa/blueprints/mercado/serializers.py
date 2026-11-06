@@ -1,3 +1,17 @@
+from flask import url_for
+
+from skinexa.dto.catalogo.item import (
+    ItemCatalogoDTO,
+)
+
+from skinexa.dto.catalogo.paginacao import (
+    PaginaItensCatalogoDTO,
+)
+
+from skinexa.utils.raridades import (
+    obter_cor_raridade,
+)
+
 from typing import Any
 
 from skinexa.domain.comparacao_preco import (
@@ -40,4 +54,53 @@ def serializar_preco_comparacao(
         "atualizado_na_origem_em": serializar_datetime(
             preco.atualizado_na_origem_em
         ),
+    }
+
+def serializar_item_mercado(
+    item: ItemCatalogoDTO,
+) -> dict[str, Any]:
+    """Serializa um item para os cards da página Mercado."""
+
+    return {
+        "id": item.id,
+        "nome_exibicao": item.nome_exibicao,
+        "tipo_item": item.tipo_item,
+        "nome_arma": item.nome_arma,
+        "nome_acabamento": item.nome_acabamento,
+        "estado_exterior": item.estado_exterior,
+        "raridade": item.raridade,
+        "cor_raridade": obter_cor_raridade(
+            item.raridade
+        ),
+        "url_icone": item.url_icone,
+        "url_icone_grande": item.url_icone_grande,
+        "variante_stattrak": item.variante_stattrak,
+        "variante_souvenir": item.variante_souvenir,
+        "url_detalhes": url_for(
+            "mercado.item",
+            item_catalogo_id=item.id,
+        ),
+    }
+
+def serializar_pagina_mercado(
+    resultado: PaginaItensCatalogoDTO,
+    *,
+    ordenacao: str,
+) -> dict[str, Any]:
+    """Serializa itens e informações de paginação do Mercado."""
+
+    return {
+        "itens": [
+            serializar_item_mercado(item)
+            for item in resultado.itens
+        ],
+        "paginacao": {
+            "pagina": resultado.pagina,
+            "por_pagina": resultado.por_pagina,
+            "total_itens": resultado.total_itens,
+            "total_paginas": resultado.total_paginas,
+            "tem_anterior": resultado.tem_anterior,
+            "tem_proxima": resultado.tem_proxima,
+        },
+        "ordenacao": ordenacao,
     }
