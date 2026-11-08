@@ -41,6 +41,98 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     /**
+     * Cria o Empty State utilizando os mesmos elementos
+     * visuais da renderização inicial do Jinja.
+     */
+    const criarEstadoVazio = (paginacao, urlDestino) => {
+        const vazio = criarElemento("div", "market-empty");
+
+        vazio.setAttribute("role", "status");
+        vazio.setAttribute(
+            "aria-labelledby",
+            "market-empty-title"
+        );
+
+        const icone = criarElemento(
+            "div",
+            "market-empty-icon"
+        );
+
+        const svg = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg"
+        );
+
+        svg.setAttribute("width", "28");
+        svg.setAttribute("height", "28");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "1.8");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+
+        const circulo = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle"
+        );
+
+        circulo.setAttribute("cx", "11");
+        circulo.setAttribute("cy", "11");
+        circulo.setAttribute("r", "8");
+
+        const cabo = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path"
+        );
+
+        cabo.setAttribute("d", "m21 21-4.35-4.35");
+
+        svg.append(circulo, cabo);
+        icone.append(svg);
+
+        const semItens = paginacao.total_itens === 0;
+
+        const titulo = criarElemento(
+            "h2",
+            "market-empty-title",
+            semItens
+                ? "Nenhum item disponível"
+                : "Página não encontrada no catálogo"
+        );
+
+        titulo.id = "market-empty-title";
+
+        const descricao = criarElemento(
+            "p",
+            "market-empty-description",
+            semItens
+                ? "O catálogo ainda não possui itens disponíveis para exibição. Tente novamente mais tarde."
+                : "A página solicitada não contém itens. Retorne ao início do catálogo para continuar navegando."
+        );
+
+        vazio.append(icone, titulo, descricao);
+
+        if (!semItens) {
+            const urlInicial = new URL(urlDestino.href);
+
+            urlInicial.searchParams.set("pagina", "1");
+
+            const link = criarElemento(
+                "a",
+                "market-empty-action",
+                "Voltar à primeira página"
+            );
+
+            link.href = urlInicial.pathname + urlInicial.search;
+
+            vazio.append(link);
+        }
+
+        return vazio;
+    };
+
+    /**
      * Mostra o estado visual de carregamento.
      */
     const iniciarCarregamento = () => {
@@ -213,12 +305,15 @@ document.addEventListener("DOMContentLoaded", () => {
     /**
      * Cria a grade com os itens retornados pela API.
      */
-    const criarListagem = (itens) => {
+    const criarListagem = (
+        itens,
+        paginacao,
+        urlDestino
+    ) => {
         if (itens.length === 0) {
-            return criarElemento(
-                "p",
-                "market-ajax-placeholder",
-                "Nenhum item encontrado nesta página."
+            return criarEstadoVazio(
+                paginacao,
+                urlDestino
             );
         }
 
@@ -335,14 +430,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const atualizarInterface = (dados, urlDestino) => {
         const paginacao = dados.paginacao;
 
-        const novaListagem = criarListagem(dados.itens);
-        const novaPaginacao = criarPaginacao(
+        const novaListagem = criarListagem(
+            dados.itens,
             paginacao,
             urlDestino
         );
 
+        const novaPaginacao = dados.itens.length > 0
+            ? criarPaginacao(paginacao, urlDestino)
+            : null;
+
         const listagemAtual = resultados.querySelector(
-            ".market-grid, .market-ajax-placeholder"
+            ".market-grid, .market-empty"
         );
 
         if (listagemAtual) {
@@ -381,6 +480,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (indicadorPagina) {
+            indicadorPagina.hidden = (
+                paginacao.total_paginas === 0
+            );
+
             indicadorPagina.textContent = (
                 paginacao.total_paginas > 0
                     ? `Página ${paginacao.pagina} de ${paginacao.total_paginas}`
