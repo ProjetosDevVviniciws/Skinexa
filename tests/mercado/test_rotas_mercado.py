@@ -462,4 +462,102 @@ def test_mercado_api_rejeita_ordenacao_invalida(
     assert dados["sucesso"] is False
     assert "inválidos" in dados["mensagem"]
 
-    mock_listar_itens.assert_not_called()
+    mock_listar_itens.assert_not_called()  
+
+@patch(
+    "skinexa.blueprints.mercado.routes."
+    "listar_itens_paginados",
+)
+@patch(
+    "skinexa.blueprints.mercado.routes.engine",
+)
+
+def test_mercado_index_catalogo_vazio(
+    mock_engine,
+    mock_listar_itens,
+    client,
+):
+    """Exibe o Empty State quando o catálogo não possui itens."""
+
+    conexao = Mock()
+
+    mock_engine.connect.return_value.__enter__ = Mock(
+        return_value=conexao,
+    )
+    mock_engine.connect.return_value.__exit__ = Mock(
+        return_value=False,
+    )
+
+    mock_listar_itens.return_value = PaginaItensCatalogoDTO(
+        itens=[],
+        pagina=1,
+        por_pagina=20,
+        total_itens=0,
+        total_paginas=0,
+        tem_anterior=False,
+        tem_proxima=False,
+    )
+
+    resposta = client.get("/mercado/")
+
+    assert resposta.status_code == 200
+
+    html = resposta.get_data(as_text=True)
+
+    assert "Nenhum item disponível" in html
+    assert "market-empty" in html
+    assert "Voltar à primeira página" not in html
+
+@patch(
+    "skinexa.blueprints.mercado.routes."
+    "listar_itens_paginados",
+)
+@patch(
+    "skinexa.blueprints.mercado.routes.engine",
+)
+
+def test_mercado_index_pagina_fora_do_intervalo(
+    mock_engine,
+    mock_listar_itens,
+    client,
+):
+    """Exibe o Empty State para páginas sem itens."""
+
+    conexao = Mock()
+
+    mock_engine.connect.return_value.__enter__ = Mock(
+        return_value=conexao,
+    )
+    mock_engine.connect.return_value.__exit__ = Mock(
+        return_value=False,
+    )
+
+    mock_listar_itens.return_value = PaginaItensCatalogoDTO(
+        itens=[],
+        pagina=99999,
+        por_pagina=20,
+        total_itens=45388,
+        total_paginas=2270,
+        tem_anterior=True,
+        tem_proxima=False,
+    )
+
+    resposta = client.get(
+        "/mercado/?pagina=99999"
+    )
+
+    assert resposta.status_code == 200
+
+    html = resposta.get_data(as_text=True)
+
+    assert "Página não encontrada no catálogo" in html
+    assert "Voltar à primeira página" in html
+    assert "market-empty-action" in html
+    assert "market-grid" not in html
+
+    mock_listar_itens.assert_called_once_with(
+        conexao,
+        pagina=99999,
+        por_pagina=20,
+        ordenacao="nome_asc",
+    )
