@@ -35,12 +35,13 @@
                     itens encontrados
                 </p>
 
-                {% if resultado.total_paginas > 0 %}
-                    <p class="market-results-page">
-                        Página {{ resultado.pagina }}
-                        de {{ resultado.total_paginas }}
-                    </p>
-                {% endif %}
+                <p
+                    class="market-results-page"
+                    {% if resultado.total_paginas == 0 %}hidden{% endif %}
+                >
+                    Página {{ resultado.pagina }}
+                    de {{ resultado.total_paginas }}
+                </p>
             </div>
 
             <form
@@ -225,9 +226,73 @@
                     </article>
                 {% endfor %}
             </div>
+        
+        {% else %}
+            <div
+                class="market-empty"
+                role="status"
+                aria-labelledby="market-empty-title"
+            >
+                <div class="market-empty-icon" aria-hidden="true">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </div>
+
+                {% if resultado.total_itens == 0 %}
+                    <h2
+                        id="market-empty-title"
+                        class="market-empty-title"
+                    >
+                        Nenhum item disponível
+                    </h2>
+
+                    <p class="market-empty-description">
+                        O catálogo ainda não possui itens disponíveis
+                        para exibição. Tente novamente mais tarde.
+                    </p>
+                {% else %}
+                    <h2
+                        id="market-empty-title"
+                        class="market-empty-title"
+                    >
+                        Página não encontrada no catálogo
+                    </h2>
+
+                    <p class="market-empty-description">
+                        A página solicitada não contém itens.
+                        Retorne ao início do catálogo para
+                        continuar navegando.
+                    </p>
+
+                    <a
+                        class="market-empty-action"
+                        href="{{ url_for(
+                            'mercado.index',
+                            pagina=1,
+                            por_pagina=resultado.por_pagina,
+                            ordenacao=ordenacao
+                        ) }}"
+                    >
+                        Voltar à primeira página
+                    </a>
+                {% endif %}
+            </div>
         {% endif %}
 
-        {% if resultado.total_paginas > 1 %}
+        {% if resultado.itens and resultado.total_paginas > 1 %}
+
             <nav
                 class="market-pagination"
                 aria-label="Paginação dos itens do mercado"
