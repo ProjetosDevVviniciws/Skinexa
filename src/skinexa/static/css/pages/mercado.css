@@ -3,6 +3,7 @@
     max-width: var(--layout-max-width);
     margin-inline: auto;
     padding: 2rem 1.5rem 3rem;
+    scroll-margin-top: var(--header-height);
 }
 
 /* Cabeçalho */
@@ -446,7 +447,7 @@ a.market-pagination-next:hover {
 .market-results.is-loading .market-grid,
 .market-results.is-loading .market-empty,
 .market-results.is-loading .market-pagination {
-    display: none;
+    display: hidden;
 }
 
 /* EMPTY STATE */
@@ -544,6 +545,97 @@ a.market-pagination-next:hover {
     outline-offset: 3px;
 }
 
+
+/* ERROR STATE */
+
+.market-error[hidden] {
+    display: none;
+}
+
+.market-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 320px;
+    padding: 3rem 1.5rem;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+
+    background: var(--color-surface);
+    text-align: center;
+}
+
+.market-error-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1.25rem;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+
+    color: var(--color-danger);
+    background: var(--color-surface-muted);
+
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.market-error-title {
+    margin: 0 0 0.75rem;
+
+    color: var(--color-text);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.market-error-description {
+    max-width: 440px;
+    margin: 0;
+
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+}
+
+.market-error-action {
+    min-height: 42px;
+    margin-top: 1.5rem;
+    padding: 0.625rem 1.125rem;
+
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-md);
+
+    color: #ffffff;
+    background: var(--color-primary);
+
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast);
+}
+
+.market-error-action:hover {
+    border-color: var(--color-primary-hover);
+    background: var(--color-primary-hover);
+}
+
+.market-error-action:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
 @media (max-width: 1199.98px) {
     .market-grid,
     .market-loading-grid {
@@ -635,6 +727,19 @@ a.market-pagination-next:hover {
     }
 
     .market-empty-description {
+        font-size: 0.875rem;
+    }
+
+    .market-error {
+        min-height: 280px;
+        padding: 2.5rem 1rem;
+    }
+
+    .market-error-title {
+        font-size: 1.125rem;
+    }
+
+    .market-error-description {
         font-size: 0.875rem;
     }
 }
