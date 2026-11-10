@@ -18,6 +18,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let controladorAtual = null;
     let identificadorRequisicao = 0;
+    
+
+    /**
+     * Posiciona a página no início do Mercado
+     * após atualizar os resultados.
+     *
+     * Respeita usuários que preferem movimento reduzido.
+     */
+    const rolarParaMercado = () => {
+        const secaoMercado = resultados.closest(".market");
+
+        if (!secaoMercado) {
+            return;
+        }
+
+        const movimentoReduzido = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+        secaoMercado.scrollIntoView({
+            behavior: movimentoReduzido ? "auto" : "smooth",
+            block: "start",
+            inline: "nearest",
+        });
+    };
 
     /**
      * Cria elementos com classes e conteúdo textual seguros.
@@ -39,6 +64,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return elemento;
     };
+    
+    /**
+     * Error State das requisições AJAX.
+     * Não modifica o HTML dos cards existentes.
+     */
+    const estadoErro = criarElemento(
+        "div",
+        "market-error"
+    );
+
+    estadoErro.hidden = true;
+    estadoErro.setAttribute("role", "alert");
+
+    const iconeErro = criarElemento(
+        "div",
+        "market-error-icon",
+        "!"
+    );
+
+    iconeErro.setAttribute("aria-hidden", "true");
+
+    const tituloErro = criarElemento(
+        "h2",
+        "market-error-title",
+        "Não foi possível carregar os itens"
+    );
+
+    const descricaoErro = criarElemento(
+        "p",
+        "market-error-description",
+        "Ocorreu um problema ao atualizar o catálogo. " +
+        "Verifique sua conexão e tente novamente."
+    );
+
+    const botaoTentarNovamente = criarElemento(
+        "button",
+        "market-error-action",
+        "Tentar novamente"
+    );
+
+    botaoTentarNovamente.type = "button";
+
+    estadoErro.append(
+        iconeErro,
+        tituloErro,
+        descricaoErro,
+        botaoTentarNovamente
+    );
+
+    carregamento.insertAdjacentElement(
+        "afterend",
+        estadoErro
+    );
+
+    let destinoFalho = null;
+    let atualizarHistoricoFalho = true;
 
     /**
      * Cria o Empty State utilizando os mesmos elementos
@@ -136,9 +217,34 @@ document.addEventListener("DOMContentLoaded", () => {
      * Mostra o estado visual de carregamento.
      */
     const iniciarCarregamento = () => {
+        ocultarErro();
+
         carregamento.hidden = false;
         resultados.classList.add("is-loading");
         resultados.setAttribute("aria-busy", "true");
+    };
+    
+    /**
+     * Remove o Error State quando uma nova consulta começa
+     * ou quando uma consulta termina com sucesso.
+     */
+    const ocultarErro = () => {
+        estadoErro.hidden = true;
+        resultados.classList.remove("is-error");
+    };
+
+    /**
+     * Mostra o erro e guarda a navegação para permitir retry.
+     */
+    const mostrarErro = (
+        urlDestino,
+        atualizarHistorico
+    ) => {
+        destinoFalho = urlDestino.href;
+        atualizarHistoricoFalho = atualizarHistorico;
+
+        estadoErro.hidden = false;
+        resultados.classList.add("is-error");
     };
 
     /**
@@ -505,7 +611,10 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     const carregarPagina = async (
         destino,
-        { atualizarHistorico = true } = {}
+        { 
+            atualizarHistorico = true,
+            rolarAoIniciar = false,
+        } = {}
     ) => {
         const urlDestino = new URL(
             destino,
@@ -529,6 +638,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const requisicaoAtual = ++identificadorRequisicao;
 
         iniciarCarregamento();
+
+        if (rolarAoIniciar) {
+            rolarParaMercado();
+        }
 
         try {
             const resposta = await fetch(
@@ -568,6 +681,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             atualizarInterface(dados, urlDestino);
 
+            destinoFalho = null;
+            ocultarErro();
+
             if (atualizarHistorico) {
                 window.history.pushState(
                     {},
@@ -575,6 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     urlDestino.pathname + urlDestino.search
                 );
             }
+
         } catch (erro) {
             if (
                 erro.name === "AbortError" ||
@@ -588,14 +705,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 erro
             );
 
-            /*
-             * Fallback temporário:
-             * utiliza a navegação Flask tradicional.
-             *
-             * Na etapa Error State, implementaremos
-             * um tratamento visual próprio.
-             */
-            window.location.assign(urlDestino.href);
+            mostrarErro(
+                urlDestino,
+                atualizarHistorico
+            );
         } finally {
             if (
                 requisicaoAtual === identificadorRequisicao
@@ -605,6 +718,26 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     };
+
+    /**
+     * Repete a última navegação que falhou.
+     */
+    botaoTentarNovamente.addEventListener(
+        "click",
+        () => {
+            if (!destinoFalho) {
+                return;
+            }
+
+            carregarPagina(
+                destinoFalho,
+                {
+                    atualizarHistorico:
+                        atualizarHistoricoFalho,
+                }
+            );
+        }
+    );
 
     /**
      * Intercepta somente o formulário da página Mercado.
@@ -630,7 +763,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             url.search = parametros.toString();
 
-            carregarPagina(url.href);
+            carregarPagina(url.href, {
+                rolarAoIniciar: true,
+            });
         }
     );
 
@@ -661,7 +796,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         evento.preventDefault();
 
-        carregarPagina(link.href);
+        carregarPagina(link.href, {
+            rolarAoIniciar: true,
+        });
     });
 
     /**
