@@ -1,0 +1,298 @@
+
+{% extends "base/base.html" %}
+
+{% block title %}
+    {{ item.nome_exibicao }} | Mercado | Skinexa
+{% endblock %}
+
+{% block styles %}
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/pages/mercado-item.css') }}"
+    >
+{% endblock %}
+
+{% block content %}
+{% set cor_raridade = item.raridade | cor_raridade %}
+{% set possui_float = item.float_minimo is not none or item.float_maximo is not none %}
+{% set possui_dados_tecnicos = possui_float or item.indice_pintura is not none %}
+
+<section
+    class="market-item"
+    aria-labelledby="market-item-title"
+    {% if cor_raridade %}
+        style="--item-rarity-color: {{ cor_raridade }};"
+    {% endif %}
+>
+
+    <nav
+        class="market-item-navigation"
+        aria-label="Retornar ao catálogo"
+    >
+        <a
+            class="market-item-back"
+            href="{{ url_for('mercado.index') }}"
+        >
+            <span aria-hidden="true">←</span>
+            Voltar ao Mercado
+        </a>
+    </nav>
+
+    <header class="market-item-header">
+
+        <div class="market-item-labels">
+            <span class="market-item-category">
+                {{ item.tipo_item | replace('_', ' ') }}
+            </span>
+
+            {% if item.raridade %}
+                <span class="market-item-rarity">
+                    <span
+                        class="market-item-rarity-dot"
+                        aria-hidden="true"
+                    ></span>
+                    {{ item.raridade }}
+                </span>
+            {% endif %}
+
+            {% if item.variante_stattrak %}
+                <span class="market-item-badge is-stattrak">
+                    StatTrak™
+                </span>
+            {% endif %}
+
+            {% if item.variante_souvenir %}
+                <span class="market-item-badge is-souvenir">
+                    Souvenir
+                </span>
+            {% endif %}
+        </div>
+
+        <h1 id="market-item-title">
+            {{ item.nome_exibicao }}
+        </h1>
+
+    </header>
+
+    <div class="market-item-main">
+
+        <section
+            class="market-item-image-panel"
+            aria-label="Imagem do item"
+        >
+            <div class="market-item-image">
+
+                {% if item.url_icone_grande or item.url_icone %}
+                    <img
+                        src="{{ item.url_icone_grande or item.url_icone }}"
+                        alt="{{ item.nome_exibicao }}"
+                        loading="eager"
+                        decoding="async"
+                    >
+                {% else %}
+                    <div class="market-item-image-fallback">
+                        <span aria-hidden="true">◇</span>
+                        <p>Imagem indisponível</p>
+                    </div>
+                {% endif %}
+
+            </div>
+        </section>
+
+        <section
+            class="market-item-panel market-item-specifications"
+            aria-labelledby="market-item-specifications-title"
+        >
+            <h2
+                id="market-item-specifications-title"
+                class="market-item-section-title"
+            >
+                <span
+                    class="market-item-section-icon"
+                    aria-hidden="true"
+                >≡</span>
+                Especificações do Item
+            </h2>
+
+            <dl class="market-item-attributes">
+
+                <div class="market-item-attribute">
+                    <dt>Nome de Mercado</dt>
+                    <dd>{{ item.nome_mercado }}</dd>
+                </div>
+
+                <div class="market-item-attribute">
+                    <dt>Tipo</dt>
+                    <dd>
+                        {{ item.tipo_item | replace('_', ' ') }}
+                    </dd>
+                </div>
+
+                {% if item.nome_arma %}
+                    <div class="market-item-attribute">
+                        <dt>Arma</dt>
+                        <dd>{{ item.nome_arma }}</dd>
+                    </div>
+                {% endif %}
+
+                {% if item.nome_acabamento %}
+                    <div class="market-item-attribute">
+                        <dt>Acabamento</dt>
+                        <dd>{{ item.nome_acabamento }}</dd>
+                    </div>
+                {% endif %}
+
+                {% if item.estado_exterior %}
+                    <div class="market-item-attribute">
+                        <dt>Exterior</dt>
+                        <dd>{{ item.estado_exterior }}</dd>
+                    </div>
+                {% endif %}
+
+                {% if item.raridade %}
+                    <div class="market-item-attribute">
+                        <dt>Raridade</dt>
+                        <dd class="market-item-rarity-value">
+                            <span
+                                class="market-item-rarity-dot"
+                                aria-hidden="true"
+                            ></span>
+                            {{ item.raridade }}
+                        </dd>
+                    </div>
+                {% endif %}
+
+                {% if item.qualidade %}
+                    <div class="market-item-attribute">
+                        <dt>Qualidade</dt>
+                        <dd>{{ item.qualidade }}</dd>
+                    </div>
+                {% endif %}
+
+                {% if item.colecao %}
+                    <div class="market-item-attribute">
+                        <dt>Coleção</dt>
+                        <dd>{{ item.colecao }}</dd>
+                    </div>
+                {% endif %}
+
+                {% if item.variante_stattrak %}
+                    <div class="market-item-attribute">
+                        <dt>Variante</dt>
+                        <dd class="market-item-stattrak-value">
+                            StatTrak™
+                        </dd>
+                    </div>
+                {% endif %}
+
+                {% if item.variante_souvenir %}
+                    <div class="market-item-attribute">
+                        <dt>Variante Souvenir</dt>
+                        <dd class="market-item-souvenir-value">
+                            Souvenir
+                        </dd>
+                    </div>
+                {% endif %}
+
+            </dl>
+
+        </section>
+    </div>
+
+    {% if possui_dados_tecnicos or item.descricao %}
+        <div class="market-item-extra">
+
+            {% if possui_dados_tecnicos %}
+                <section
+                    class="market-item-panel market-item-technical"
+                    aria-labelledby="market-item-technical-title"
+                >
+                    <h2
+                        id="market-item-technical-title"
+                        class="market-item-section-title"
+                    >
+                        <span
+                            class="market-item-section-icon"
+                            aria-hidden="true"
+                        >▤</span>
+                        Características Técnicas
+                    </h2>
+
+                    <div class="market-item-technical-grid">
+
+                        {% if item.float_minimo is not none %}
+                            <div class="market-item-technical-card">
+                                <span class="market-item-technical-label">
+                                    Float Mínimo
+                                </span>
+
+                                <strong class="market-item-technical-value is-accent">
+                                    {{ "%.2f" | format(item.float_minimo) }}
+                                </strong>
+                            </div>
+                        {% endif %}
+
+                        {% if item.float_maximo is not none %}
+                            <div class="market-item-technical-card">
+                                <span class="market-item-technical-label">
+                                    Float Máximo
+                                </span>
+
+                                <strong class="market-item-technical-value is-accent">
+                                    {{ "%.2f" | format(item.float_maximo) }}
+                                </strong>
+                            </div>
+                        {% endif %}
+
+                        {% if item.indice_pintura is not none %}
+                            <div class="market-item-technical-card">
+                                <span class="market-item-technical-label">
+                                    Índice de Pintura
+                                </span>
+
+                                <strong class="market-item-technical-value">
+                                    {{ item.indice_pintura }}
+                                </strong>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    {% if possui_float %}
+                        <p class="market-item-technical-note">
+                            Os valores apresentados representam os
+                            limites de float cadastrados para o item,
+                            não o float de um anúncio individual.
+                        </p>
+                    {% endif %}
+
+                </section>
+            {% endif %}
+
+            {% if item.descricao %}
+                <section
+                    class="market-item-panel market-item-description"
+                    aria-labelledby="market-item-description-title"
+                >
+                    <h2
+                        id="market-item-description-title"
+                        class="market-item-section-title"
+                    >
+                        <span
+                            class="market-item-section-icon"
+                            aria-hidden="true"
+                        >ⓘ</span>
+                        Sobre o Item
+                    </h2>
+
+                    <div class="market-item-description-content">
+                        <p>{{ item.descricao }}</p>
+                    </div>
+                </section>
+            {% endif %}
+
+        </div>
+    {% endif %}
+
+</section>
+{% endblock %}
