@@ -26,6 +26,8 @@ from skinexa.database.queries.itens_catalogo import (
     ORDENACOES_CATALOGO,
 )
 
+from skinexa.services.catalogo.service import obter_item
+
 mercado_bp = Blueprint(
     "mercado",
     __name__,
@@ -131,11 +133,20 @@ def listar_itens_json():
 
 @mercado_bp.get("/item/<int:item_catalogo_id>")
 def item(item_catalogo_id: int):
-    """Renderiza a página individual de um item."""
+    """Renderiza a página individual de um item do catálogo."""
+
+    with engine.connect() as conexao:
+        item_catalogo = obter_item(
+            conexao,
+            item_catalogo_id,
+        )
+
+    if item_catalogo is None:
+        abort(404)
 
     return render_template(
         "mercado/item.html",
-        item_catalogo_id=item_catalogo_id,
+        item=item_catalogo,
     )
     
 @mercado_bp.get("/item/<int:item_catalogo_id>/precos")
