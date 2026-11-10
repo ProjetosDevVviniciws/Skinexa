@@ -1,0 +1,526 @@
+.market-item {
+    width: 100%;
+    max-width: var(--layout-max-width);
+    margin-inline: auto;
+    padding: 2rem 1.5rem 3rem;
+
+    scroll-margin-top: var(--header-height);
+}
+
+/* NAVEGAÇÃO DE RETORNO */
+
+.market-item-navigation {
+    margin-bottom: 1.5rem;
+}
+
+.market-item-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    color: var(--color-accent);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+
+    transition: color var(--transition-fast);
+}
+
+.market-item-back:hover {
+    color: var(--color-text);
+}
+
+.market-item-back:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+}
+
+.market-item-back span {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+/* CABEÇALHO */
+
+.market-item-header {
+    margin-bottom: 1.5rem;
+}
+
+.market-item-labels {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    margin-bottom: 0.875rem;
+}
+
+.market-item-category,
+.market-item-rarity,
+.market-item-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+
+    background: var(--color-surface);
+
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.market-item-category {
+    color: var(--color-text-secondary);
+    text-transform: capitalize;
+}
+
+.market-item-rarity {
+    color: var(
+        --item-rarity-color,
+        var(--color-text-secondary)
+    );
+}
+
+.market-item-rarity-dot {
+    display: inline-block;
+    flex-shrink: 0;
+
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+
+    background: var(
+        --item-rarity-color,
+        var(--color-text-muted)
+    );
+}
+
+.market-item-badge.is-stattrak {
+    color: #ffab66;
+    border-color: rgb(249 115 22 / 20%);
+    background: rgb(249 115 22 / 13%);
+}
+
+.market-item-badge.is-souvenir {
+    color: #facc15;
+    border-color: rgb(250 204 21 / 20%);
+    background: rgb(250 204 21 / 12%);
+}
+
+.market-item-header h1 {
+    margin: 0;
+
+    color: var(--color-text);
+
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.3;
+
+    overflow-wrap: anywhere;
+}
+
+/* COMPOSIÇÃO PRINCIPAL */
+
+.market-item-main {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    align-items: stretch;
+    gap: 1.5rem;
+}
+
+.market-item-image-panel,
+.market-item-panel {
+    min-width: 0;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+
+    background: var(--color-surface);
+}
+
+/* IMAGEM PRINCIPAL */
+
+.market-item-image-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+    padding: 2rem;
+
+    background: var(--color-surface-muted);
+}
+
+.market-item-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 280px;
+}
+
+.market-item-image img {
+    display: block;
+
+    width: 100%;
+    max-width: 520px;
+    max-height: 390px;
+
+    object-fit: contain;
+}
+
+.market-item-image-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.market-item-image-fallback span {
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.market-item-image-fallback p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* PAINÉIS */
+
+.market-item-panel {
+    padding: 1.5rem;
+}
+
+.market-item-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+
+    margin: 0 0 1.25rem;
+
+    color: var(--color-text);
+
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+}
+
+.market-item-section-icon {
+    flex-shrink: 0;
+
+    color: var(--color-accent);
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+/* ESPECIFICAÇÕES */
+
+.market-item-attributes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+
+    margin: 0;
+}
+
+.market-item-attribute {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--radius-sm);
+
+    background: var(--color-surface-muted);
+}
+
+.market-item-attribute dt {
+    flex: 0 1 auto;
+    min-width: 0;
+
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.market-item-attribute dd {
+    flex: 0 1 65%;
+    min-width: 0;
+
+    margin: 0;
+
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: right;
+
+    overflow-wrap: anywhere;
+}
+
+.market-item-attribute dd.market-item-rarity-value {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+
+    color: var(
+        --item-rarity-color,
+        var(--color-text)
+    );
+}
+
+.market-item-attribute dd.market-item-stattrak-value {
+    color: #ffab66;
+}
+
+.market-item-attribute dd.market-item-souvenir-value {
+    color: #facc15;
+}
+
+/* INFORMAÇÕES COMPLEMENTARES */
+
+.market-item-extra {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1.3fr)
+        minmax(0, 1fr);
+
+    align-items: start;
+    gap: 1.5rem;
+
+    margin-top: 1.5rem;
+}
+
+/* CARACTERÍSTICAS TÉCNICAS */
+
+.market-item-technical-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 0.75rem;
+}
+
+.market-item-technical-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    min-width: 0;
+    padding: 1rem;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+
+    background: var(--color-surface-muted);
+}
+
+.market-item-technical-label {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.market-item-technical-value {
+    color: var(--color-text);
+
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+
+    overflow-wrap: anywhere;
+}
+
+.market-item-technical-value.is-accent {
+    color: var(--color-accent);
+}
+
+.market-item-technical-note {
+    margin: 1.25rem 0 0;
+
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.6;
+}
+
+/* DESCRIÇÃO */
+
+.market-item-description-content {
+    padding: 1.25rem;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+
+    background: var(--color-surface-muted);
+}
+
+.market-item-description-content p {
+    margin: 0;
+
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.75;
+
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+/* RESPONSIVIDADE */
+
+@media (max-width: 991.98px) {
+    .market-item-main {
+        gap: 1rem;
+    }
+
+    .market-item-extra {
+        gap: 1rem;
+    }
+
+    .market-item-panel {
+        padding: 1.25rem;
+    }
+
+    .market-item-technical-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .market-item {
+        padding: 1.5rem 1rem 2.5rem;
+    }
+
+    .market-item-navigation {
+        margin-bottom: 1.25rem;
+    }
+
+    .market-item-header {
+        margin-bottom: 1.25rem;
+    }
+
+    .market-item-main,
+    .market-item-extra {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.875rem;
+    }
+
+    .market-item-extra {
+        margin-top: 0.875rem;
+    }
+
+    .market-item-image-panel {
+        padding: 1.5rem;
+    }
+
+    .market-item-image {
+        min-height: 230px;
+    }
+
+    .market-item-image img {
+        max-height: 310px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .market-item-labels {
+        gap: 0.375rem;
+    }
+
+    .market-item-category,
+    .market-item-rarity,
+    .market-item-badge {
+        font-size: 0.6875rem;
+    }
+
+    .market-item-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .market-item-panel {
+        padding: 1rem;
+    }
+
+    .market-item-section-title {
+        font-size: 1rem;
+    }
+
+    .market-item-image-panel {
+        padding: 1rem;
+    }
+
+    .market-item-image {
+        min-height: 200px;
+    }
+
+    .market-item-attribute {
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .market-item-attribute dt,
+    .market-item-attribute dd {
+        font-size: 0.75rem;
+    }
+
+    .market-item-technical-grid {
+        gap: 0.625rem;
+    }
+
+    .market-item-technical-card {
+        padding: 0.875rem;
+    }
+
+    .market-item-technical-value {
+        font-size: 1.125rem;
+    }
+
+    .market-item-description-content {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 339.98px) {
+    .market-item-technical-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .market-item-attribute {
+        flex-wrap: wrap;
+    }
+
+    .market-item-attribute dd {
+        flex-basis: 100%;
+        text-align: left;
+    }
+
+    .market-item-attribute dd.market-item-rarity-value {
+        justify-content: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .market-item-back {
+        transition: none;
+    }
+}
