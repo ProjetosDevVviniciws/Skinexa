@@ -23,6 +23,127 @@
         </p>
     </header>
 
+    <div class="market-search" 
+    data-market-search
+    data-market-suggestions-url="{{ url_for('mercado.sugestoes_itens_json') }}"
+    >
+        <form
+            id="market-search-form"
+            class="market-search-form"
+            method="GET"
+            action="{{ url_for('mercado.index') }}"
+            role="search"
+        >
+            <label
+                class="market-search-label"
+                for="market-search-input"
+            >
+                Pesquisar itens do catálogo
+            </label>
+
+            <div class="market-search-field">
+                <button
+                    class="market-search-submit"
+                    type="submit"
+                    aria-label="Pesquisar itens"
+                    title="Pesquisar"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </button>
+
+                <input
+                    id="market-search-input"
+                    class="market-search-input"
+                    type="search"
+                    name="q"
+                    value="{{ termo | default('', true) }}"
+                    placeholder="Pesquisar itens por nome ou identificador..."
+                    autocomplete="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    maxlength="100"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded="false"
+                    aria-controls="market-search-suggestions"
+                >
+
+                <button
+                    id="market-search-clear"
+                    class="market-search-clear"
+                    type="button"
+                    aria-label="Limpar pesquisa"
+                    title="Limpar pesquisa"
+                    {% if not termo %}hidden{% endif %}
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <input
+                type="hidden"
+                name="por_pagina"
+                value="{{ resultado.por_pagina }}"
+            >
+
+            <input
+                type="hidden"
+                name="ordenacao"
+                value="{{ ordenacao }}"
+            >
+        </form>
+
+        <div
+            id="market-search-panel"
+            class="market-search-panel"
+            hidden
+        >
+            <div class="market-search-panel-header">
+                <span>Sugestões do catálogo</span>
+
+                <span class="market-search-keyboard">
+                    Use ↑ ↓ e Enter para navegar
+                </span>
+            </div>
+
+            <div
+                id="market-search-status"
+                class="market-search-status"
+                role="status"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <ul
+                id="market-search-suggestions"
+                class="market-search-suggestions"
+                role="listbox"
+                aria-label="Sugestões de itens"
+            ></ul>
+
+            <a
+                id="market-search-all"
+                class="market-search-all"
+                href="{{ url_for('mercado.index') }}"
+                hidden
+            >
+                Ver todos os resultados
+                <span aria-hidden="true">→</span>
+            </a>
+        </div>
+    </div>
+
     <div
         class="market-results"
         data-market-api-url="{{ url_for('mercado.listar_itens_json') }}"
@@ -96,6 +217,11 @@
                     Aplicar
                 </button>
             </form>
+            <input
+                type="hidden"
+                name="q"
+                value="{{ termo | default('', true) }}"
+            >
         </div>
 
         <div
@@ -250,7 +376,27 @@
                     </svg>
                 </div>
 
-                {% if resultado.total_itens == 0 %}
+                {% if termo and resultado.total_itens == 0 %}
+                    <h2
+                        id="market-empty-title"
+                        class="market-empty-title"
+                    >
+                        Nenhum item encontrado
+                    </h2>
+
+                    <p class="market-empty-description">
+                        Não encontramos itens correspondentes à sua pesquisa.
+                        Experimente outro nome ou identificador.
+                    </p>
+
+                    <a
+                        class="market-empty-action"
+                        href="{{ url_for('mercado.index') }}"
+                    >
+                        Limpar pesquisa
+                    </a>
+
+                {% elif resultado.total_itens == 0 %}
                     <h2
                         id="market-empty-title"
                         class="market-empty-title"
@@ -304,7 +450,8 @@
                             'mercado.index',
                             pagina=resultado.pagina - 1,
                             por_pagina=resultado.por_pagina,
-                            ordenacao=ordenacao
+                            ordenacao=ordenacao,
+                            q=termo,
                         ) }}"
                     >
                         Anterior
@@ -330,7 +477,8 @@
                             'mercado.index',
                             pagina=resultado.pagina + 1,
                             por_pagina=resultado.por_pagina,
-                            ordenacao=ordenacao
+                            ordenacao=ordenacao,
+                            q=termo,
                         ) }}"
                     >
                         Próxima
