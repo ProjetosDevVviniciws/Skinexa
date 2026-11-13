@@ -23,6 +23,10 @@ from skinexa.utils.serializadores import (
     serializar_decimal,
 )
 
+from skinexa.dto.catalogo.autocomplete import (
+    SugestaoItemCatalogoDTO,
+)
+
 def serializar_preco_comparacao(
     preco: PrecoComparacao,
 ) -> dict[str, Any]:
@@ -103,4 +107,21 @@ def serializar_pagina_mercado(
             "tem_proxima": resultado.tem_proxima,
         },
         "ordenacao": ordenacao,
+    } 
+
+def serializar_sugestao_mercado(
+    sugestao: SugestaoItemCatalogoDTO,
+) -> dict[str, Any]:
+    """Serializa uma sugestão de item para o autocomplete."""
+
+    return {
+        "id": sugestao.id,
+        "nome_mercado": sugestao.nome_mercado,
+        "nome_exibicao": sugestao.nome_exibicao,
+        "tipo_item": sugestao.tipo_item,
+        "url_icone": sugestao.url_icone,
+        "url_detalhes": url_for(
+            "mercado.item",
+            item_catalogo_id=sugestao.id,
+        ),
     }
