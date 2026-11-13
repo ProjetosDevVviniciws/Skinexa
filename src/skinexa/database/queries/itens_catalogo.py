@@ -794,3 +794,125 @@ def inserir_ou_atualizar_item_catalogo_importacao(
         )
 
     return int(item_catalogo_id)
+
+def pesquisar_itens_catalogo_paginados(
+    conexao: Connection,
+    *,
+    termo: str,
+    limite: int,
+    deslocamento: int,
+    ordenacao: str = "nome_asc",
+) -> tuple[list[dict[str, Any]], int]:
+    """
+    Pesquisa itens por nome ou ID exato, retornando
+    os registros da página e o total encontrado.
+    """
+
+    termo_normalizado = termo.strip()
+
+    if not termo_normalizado:
+        return [], 0
+
+    if limite < 1:
+        raise ValueError(
+            "O limite deve ser maior que zero."
+        )
+
+    if deslocamento < 0:
+        raise ValueError(
+            "O deslocamento não pode ser negativo."
+        )
+
+    clausula_ordenacao = _obter_ordenacao_catalogo(
+        ordenacao
+    )
+
+    identificador = (
+        int(termo_normalizado)
+        if termo_normalizado.isascii()
+        and termo_normalizado.isdecimal()
+        else 0
+    )
+
+    parametros_pesquisa = {
+        "termo": f"%{termo_normalizado}%",
+        "identificador": identificador,
+    }
+
+    condicao_pesquisa = """
+        (
+            nome_mercado LIKE :termo
+            OR nome_exibicao LIKE :termo
+            OR id = :identificador
+        )
+    """
+
+    consulta_total = text(
+        f"""
+        SELECT COUNT(*)
+        FROM itens_catalogo
+        WHERE {condicao_pesquisa}
+        """
+    )
+
+    total_itens = int(
+        conexao.execute(
+            consulta_total,
+            parametros_pesquisa,
+        ).scalar_one()
+    )
+
+    consulta_itens = text(
+        f"""
+        SELECT
+            id,
+            app_id,
+            nome_mercado,
+            nome_exibicao,
+            tipo_item,
+            nome_arma,
+            nome_acabamento,
+            estado_exterior,
+            raridade,
+            qualidade,
+            colecao,
+            descricao,
+            indice_pintura,
+            float_minimo,
+            float_maximo,
+            variante_stattrak,
+            variante_souvenir,
+            comercializavel,
+            mercadoria_generica,
+            steam_class_id,
+            steam_instance_id,
+            url_icone,
+            url_icone_grande,
+            tags,
+            metadados_origem,
+            criado_em,
+            atualizado_em
+        FROM itens_catalogo
+        WHERE {condicao_pesquisa}
+        ORDER BY {clausula_ordenacao}
+        LIMIT :limite
+        OFFSET :deslocamento
+        """
+    )
+
+    registros = conexao.execute(
+        consulta_itens,
+        {
+            **parametros_pesquisa,
+            "limite": limite,
+            "deslocamento": deslocamento,
+        },
+    )
+
+    return (
+        [
+            dict(registro._mapping)
+            for registro in registros
+        ],
+        total_itens,
+    )
