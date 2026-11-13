@@ -5,6 +5,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const carregamento = document.querySelector("#market-loading");
     const formularioOrdenacao = document.querySelector(".market-sort");
 
+    const pesquisa = document.querySelector("[data-market-search]");
+    const formularioPesquisa = document.querySelector("#market-search-form");
+    const campoPesquisa = document.querySelector("#market-search-input");
+    const botaoLimparPesquisa = document.querySelector("#market-search-clear");
+    const painelSugestoes = document.querySelector("#market-search-panel");
+    const listaSugestoes = document.querySelector("#market-search-suggestions");
+    const statusSugestoes = document.querySelector("#market-search-status");
+    const linkTodosResultados = document.querySelector("#market-search-all");
+
     if (
         !resultados ||
         !carregamento ||
@@ -15,6 +24,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const urlApi = resultados.dataset.marketApiUrl;
+
+    if (
+        !pesquisa ||
+        !formularioPesquisa ||
+        !campoPesquisa ||
+        !botaoLimparPesquisa ||
+        !painelSugestoes ||
+        !listaSugestoes ||
+        !statusSugestoes ||
+        !linkTodosResultados ||
+        !pesquisa.dataset.marketSuggestionsUrl
+    ) {
+        return;
+    }
+
+    const urlSugestoes = pesquisa.dataset.marketSuggestionsUrl;
 
     let controladorAtual = null;
     let identificadorRequisicao = 0;
@@ -174,12 +199,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const semItens = paginacao.total_itens === 0;
 
+        const termoPesquisa = (
+            urlDestino.searchParams.get("q") || ""
+        ).trim();
+
+        const pesquisaSemResultados = (
+            semItens && termoPesquisa.length > 0
+        );
+
         const titulo = criarElemento(
             "h2",
             "market-empty-title",
-            semItens
-                ? "Nenhum item disponível"
-                : "Página não encontrada no catálogo"
+            pesquisaSemResultados
+                ? "Nenhum item encontrado"
+                : semItens
+                    ? "Nenhum item disponível"
+                    : "Página não encontrada no catálogo"
         );
 
         titulo.id = "market-empty-title";
@@ -187,12 +222,26 @@ document.addEventListener("DOMContentLoaded", () => {
         const descricao = criarElemento(
             "p",
             "market-empty-description",
-            semItens
-                ? "O catálogo ainda não possui itens disponíveis para exibição. Tente novamente mais tarde."
-                : "A página solicitada não contém itens. Retorne ao início do catálogo para continuar navegando."
+            pesquisaSemResultados
+                ? "Não encontramos itens correspondentes à sua pesquisa. Experimente outro nome ou identificador."
+                : semItens
+                    ? "O catálogo ainda não possui itens disponíveis para exibição. Tente novamente mais tarde."
+                    : "A página solicitada não contém itens. Retorne ao início do catálogo para continuar navegando."
         );
 
         vazio.append(icone, titulo, descricao);
+
+        if (pesquisaSemResultados) {
+            const linkLimpar = criarElemento(
+                "a",
+                "market-empty-action",
+                "Limpar pesquisa"
+            );
+
+            linkLimpar.href = urlDestino.pathname;
+
+            vazio.append(linkLimpar);
+        }
 
         if (!semItens) {
             const urlInicial = new URL(urlDestino.href);
@@ -680,6 +729,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             atualizarInterface(dados, urlDestino);
+            sincronizarFormularios(urlDestino);
 
             destinoFalho = null;
             ocultarErro();
@@ -719,6 +769,506 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    /* Pesquisa de itens e gerenciamento do autocomplete */
+
+    let temporizadorSugestoes = null;
+    let controladorSugestoes = null;
+    let identificadorSugestoes = 0;
+
+    let sugestoesAtuais = [];
+    let indiceSugestaoAtiva = -1;
+
+    const LIMITE_TERMO_PESQUISA = 100;
+    const ATRASO_AUTOCOMPLETE = 300;
+
+    const campoOrdenacaoPesquisa = formularioPesquisa.querySelector(
+        'input[name="ordenacao"]'
+    );
+
+    const campoQuantidadePesquisa = formularioPesquisa.querySelector(
+        'input[name="por_pagina"]'
+    );
+
+    const campoPesquisaOrdenacao = formularioOrdenacao.querySelector(
+        'input[name="q"]'
+    );
+
+    const sincronizarFormularios = (url) => {
+        const parametros = url.searchParams;
+        const termo = parametros.get("q") || "";
+
+        campoPesquisa.value = termo;
+        botaoLimparPesquisa.hidden = termo.length === 0;
+
+        if (campoPesquisaOrdenacao) {
+            campoPesquisaOrdenacao.value = termo;
+        }
+
+        if (campoOrdenacaoPesquisa) {
+            campoOrdenacaoPesquisa.value = (
+                parametros.get("ordenacao") || "nome_asc"
+            );
+        }
+
+        if (campoQuantidadePesquisa) {
+            campoQuantidadePesquisa.value = (
+                parametros.get("por_pagina") || "20"
+            );
+        }
+    };
+
+    const construirUrlPesquisa = (termo) => {
+        const url = new URL(
+            formularioPesquisa.action,
+            window.location.href
+        );
+
+        const parametros = new URLSearchParams(
+            window.location.search
+        );
+
+        parametros.set("pagina", "1");
+
+        if (termo) {
+            parametros.set("q", termo);
+        } else {
+            parametros.delete("q");
+        }
+
+        url.search = parametros.toString();
+
+        return url;
+    };
+
+    const interromperSugestoes = () => {
+        if (temporizadorSugestoes !== null) {
+            clearTimeout(temporizadorSugestoes);
+            temporizadorSugestoes = null;
+        }
+
+        if (controladorSugestoes) {
+            controladorSugestoes.abort();
+            controladorSugestoes = null;
+        }
+
+        identificadorSugestoes += 1;
+    };
+
+    const atualizarSelecaoSugestoes = () => {
+        const opcoes = listaSugestoes.querySelectorAll(
+            ".market-search-suggestion-link"
+        );
+
+        opcoes.forEach((opcao, indice) => {
+            const ativa = indice === indiceSugestaoAtiva;
+
+            opcao.classList.toggle("is-active", ativa);
+            opcao.setAttribute(
+                "aria-selected",
+                String(ativa)
+            );
+
+            if (ativa) {
+                campoPesquisa.setAttribute(
+                    "aria-activedescendant",
+                    opcao.id
+                );
+
+                opcao.scrollIntoView({
+                    block: "nearest",
+                    behavior: "instant",
+                });
+            }
+        });
+
+        if (indiceSugestaoAtiva < 0) {
+            campoPesquisa.removeAttribute(
+                "aria-activedescendant"
+            );
+        }
+    };
+
+    const fecharSugestoes = () => {
+        interromperSugestoes();
+
+        painelSugestoes.hidden = true;
+        campoPesquisa.setAttribute("aria-expanded", "false");
+        campoPesquisa.removeAttribute("aria-activedescendant");
+
+        indiceSugestaoAtiva = -1;
+        sugestoesAtuais = [];
+    };
+
+    const abrirSugestoes = () => {
+        painelSugestoes.hidden = false;
+        campoPesquisa.setAttribute("aria-expanded", "true");
+    };
+
+    const mostrarStatusSugestoes = (mensagem) => {
+        listaSugestoes.replaceChildren();
+
+        sugestoesAtuais = [];
+        indiceSugestaoAtiva = -1;
+
+        campoPesquisa.removeAttribute("aria-activedescendant");
+
+        statusSugestoes.textContent = mensagem;
+        statusSugestoes.hidden = false;
+
+        linkTodosResultados.hidden = true;
+
+        abrirSugestoes();
+    };
+
+    const renderizarSugestoes = (sugestoes, termo) => {
+        listaSugestoes.replaceChildren();
+
+        sugestoesAtuais = sugestoes;
+        indiceSugestaoAtiva = -1;
+
+        statusSugestoes.hidden = true;
+        statusSugestoes.textContent = "";
+
+        campoPesquisa.removeAttribute("aria-activedescendant");
+
+        const fragmento = document.createDocumentFragment();
+
+        sugestoes.forEach((sugestao, indice) => {
+            const item = criarElemento(
+                "li",
+                "market-search-suggestion"
+            );
+
+            const link = criarElemento(
+                "a",
+                "market-search-suggestion-link"
+            );
+
+            link.id = `market-search-option-${indice}`;
+            link.href = sugestao.url_detalhes;
+            link.setAttribute("role", "option");
+            link.setAttribute("aria-selected", "false");
+
+            const imagemContainer = criarElemento(
+                "span",
+                "market-search-suggestion-image"
+            );
+
+            if (sugestao.url_icone) {
+                const imagem = document.createElement("img");
+
+                imagem.src = sugestao.url_icone;
+                imagem.alt = "";
+                imagem.loading = "lazy";
+                imagem.decoding = "async";
+
+                imagemContainer.append(imagem);
+            } else {
+                imagemContainer.classList.add("is-empty");
+                imagemContainer.textContent = "Sem imagem";
+            }
+
+            const conteudo = criarElemento(
+                "span",
+                "market-search-suggestion-content"
+            );
+
+            conteudo.append(
+                criarElemento(
+                    "span",
+                    "market-search-suggestion-name",
+                    sugestao.nome_exibicao
+                ),
+                criarElemento(
+                    "span",
+                    "market-search-suggestion-type",
+                    String(sugestao.tipo_item).replaceAll("_", " ")
+                )
+            );
+
+            const seta = criarElemento(
+                "span",
+                "market-search-suggestion-arrow",
+                "→"
+            );
+
+            seta.setAttribute("aria-hidden", "true");
+
+            link.append(imagemContainer, conteudo, seta);
+            item.append(link);
+            fragmento.append(item);
+        });
+
+        listaSugestoes.append(fragmento);
+
+        if (sugestoes.length === 0) {
+            statusSugestoes.textContent = (
+                "Nenhuma sugestão encontrada. " +
+                "Você pode pesquisar no catálogo completo."
+            );
+            statusSugestoes.hidden = false;
+        }
+
+        const urlTodos = construirUrlPesquisa(termo);
+
+        linkTodosResultados.href = (
+            urlTodos.pathname + urlTodos.search
+        );
+
+        linkTodosResultados.replaceChildren(
+            document.createTextNode(
+                `Ver todos os resultados para "${termo}" `
+            ),
+            criarElemento("span", "", "→")
+        );
+
+        linkTodosResultados.hidden = false;
+
+        abrirSugestoes();
+    };
+
+    const consultarSugestoes = async (termo) => {
+        if (termo.length < 2) {
+            fecharSugestoes();
+            return;
+        }
+
+        if (controladorSugestoes) {
+            controladorSugestoes.abort();
+        }
+
+        const controlador = new AbortController();
+
+        controladorSugestoes = controlador;
+        const requisicaoAtual = ++identificadorSugestoes;
+
+        mostrarStatusSugestoes("Buscando sugestões...");
+
+        const url = new URL(
+            urlSugestoes,
+            window.location.origin
+        );
+
+        url.searchParams.set("q", termo);
+
+        try {
+            const resposta = await fetch(url.href, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                },
+                signal: controlador.signal,
+            });
+
+            if (!resposta.ok) {
+                throw new Error(
+                    `Falha HTTP ${resposta.status}`
+                );
+            }
+
+            const dados = await resposta.json();
+
+            if (!Array.isArray(dados.sugestoes)) {
+                throw new Error(
+                    "Resposta inválida do autocomplete."
+                );
+            }
+
+            if (
+                requisicaoAtual !== identificadorSugestoes ||
+                campoPesquisa.value.trim() !== termo
+            ) {
+                return;
+            }
+
+            renderizarSugestoes(dados.sugestoes, termo);
+        } catch (erro) {
+            if (
+                erro.name === "AbortError" ||
+                requisicaoAtual !== identificadorSugestoes
+            ) {
+                return;
+            }
+
+            console.error(
+                "Erro ao consultar sugestões:",
+                erro
+            );
+
+            mostrarStatusSugestoes(
+                "Não foi possível carregar as sugestões. " +
+                "Você ainda pode pesquisar normalmente."
+            );
+        } finally {
+            if (requisicaoAtual === identificadorSugestoes) {
+                controladorSugestoes = null;
+            }
+        }
+    };
+
+    const agendarSugestoes = () => {
+        interromperSugestoes();
+
+        const termo = campoPesquisa.value.trim();
+
+        botaoLimparPesquisa.hidden = termo.length === 0;
+
+        if (
+            termo.length < 2 ||
+            termo.length > LIMITE_TERMO_PESQUISA
+        ) {
+            fecharSugestoes();
+            return;
+        }
+
+        temporizadorSugestoes = setTimeout(() => {
+            temporizadorSugestoes = null;
+            consultarSugestoes(termo);
+        }, ATRASO_AUTOCOMPLETE);
+    };
+
+    /* Eventos da pesquisa */
+
+    campoPesquisa.addEventListener(
+        "input",
+        agendarSugestoes
+    );
+
+    campoPesquisa.addEventListener("focus", () => {
+        if (
+            campoPesquisa.value.trim().length >= 2 &&
+            painelSugestoes.hidden
+        ) {
+            agendarSugestoes();
+        }
+    });
+
+    campoPesquisa.addEventListener("keydown", (evento) => {
+        if (evento.key === "Escape") {
+            if (!painelSugestoes.hidden) {
+                evento.preventDefault();
+                fecharSugestoes();
+            }
+            return;
+        }
+
+        if (
+            evento.key === "ArrowDown" ||
+            evento.key === "ArrowUp"
+        ) {
+            if (painelSugestoes.hidden) {
+                return;
+            }
+
+            if (sugestoesAtuais.length === 0) {
+                return;
+            }
+
+            evento.preventDefault();
+
+            const direcao = evento.key === "ArrowDown"
+                ? 1
+                : -1;
+
+            indiceSugestaoAtiva = Math.max(
+                -1,
+                Math.min(
+                    indiceSugestaoAtiva + direcao,
+                    sugestoesAtuais.length - 1
+                )
+            );
+
+            atualizarSelecaoSugestoes();
+            return;
+        }
+
+        if (
+            evento.key === "Enter" &&
+            !painelSugestoes.hidden &&
+            indiceSugestaoAtiva >= 0
+        ) {
+            evento.preventDefault();
+
+            const sugestao = sugestoesAtuais[
+                indiceSugestaoAtiva
+            ];
+
+            if (sugestao?.url_detalhes) {
+                window.location.assign(
+                    sugestao.url_detalhes
+                );
+            }
+        }
+    });
+
+    formularioPesquisa.addEventListener(
+        "submit",
+        (evento) => {
+            if (evento.defaultPrevented) {
+                return;
+            }
+
+            evento.preventDefault();
+            fecharSugestoes();
+
+            const termo = campoPesquisa.value.trim();
+            const url = construirUrlPesquisa(termo);
+
+            if (termo.length > LIMITE_TERMO_PESQUISA) {
+                return;
+            }
+
+            carregarPagina(url.href, {
+                rolarAoIniciar: true,
+            });
+        }
+    );
+
+    botaoLimparPesquisa.addEventListener(
+        "click",
+        () => {
+            campoPesquisa.value = "";
+            fecharSugestoes();
+
+            const url = construirUrlPesquisa("");
+
+            carregarPagina(url.href);
+            campoPesquisa.focus();
+        }
+    );
+
+    linkTodosResultados.addEventListener(
+        "click",
+        (evento) => {
+            if (
+                evento.defaultPrevented ||
+                evento.button !== 0 ||
+                evento.ctrlKey ||
+                evento.metaKey ||
+                evento.shiftKey ||
+                evento.altKey
+            ) {
+                return;
+            }
+
+            evento.preventDefault();
+
+            const destino = linkTodosResultados.href;
+
+            fecharSugestoes();
+
+            carregarPagina(destino, {
+                rolarAoIniciar: true,
+            });
+        }
+    );
+
+    document.addEventListener("pointerdown", (evento) => {
+        if (!pesquisa.contains(evento.target)) {
+            fecharSugestoes();
+        }
+    });
+
     /**
      * Repete a última navegação que falhou.
      */
@@ -738,9 +1288,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
         }
     );
-
+    
     /**
-     * Intercepta somente o formulário da página Mercado.
+     * Ordena os resultados preservando a pesquisa ativa.
      */
     formularioOrdenacao.addEventListener(
         "submit",
@@ -752,16 +1302,53 @@ document.addEventListener("DOMContentLoaded", () => {
             evento.preventDefault();
 
             const url = new URL(
-                formularioOrdenacao.action
+                window.location.href
             );
 
-            const parametros = new URLSearchParams(
+            const parametrosFormulario = new URLSearchParams(
                 new FormData(formularioOrdenacao)
             );
 
-            parametros.set("pagina", "1");
+            // Mantém os parâmetros da URL atual,
+            // atualizando somente os controles da ordenação.
+            const ordenacao = parametrosFormulario.get(
+                "ordenacao"
+            );
 
-            url.search = parametros.toString();
+            const porPagina = parametrosFormulario.get(
+                "por_pagina"
+            );
+
+            if (ordenacao) {
+                url.searchParams.set(
+                    "ordenacao",
+                    ordenacao
+                );
+            }
+
+            if (porPagina) {
+                url.searchParams.set(
+                    "por_pagina",
+                    porPagina
+                );
+            }
+
+            // A URL representa a pesquisa já aplicada.
+            // Portanto, preservamos seu parâmetro q.
+            const termoAtual = (
+                url.searchParams.get("q") || ""
+            ).trim();
+
+            if (termoAtual) {
+                url.searchParams.set("q", termoAtual);
+            } else {
+                url.searchParams.delete("q");
+            }
+
+            // Uma nova ordenação começa na primeira página.
+            url.searchParams.set("pagina", "1");
+
+            fecharSugestoes();
 
             carregarPagina(url.href, {
                 rolarAoIniciar: true,
@@ -805,6 +1392,8 @@ document.addEventListener("DOMContentLoaded", () => {
      * Restaura páginas visitadas usando Voltar/Avançar.
      */
     window.addEventListener("popstate", () => {
+        fecharSugestoes();
+
         carregarPagina(
             window.location.href,
             { atualizarHistorico: false }
@@ -823,6 +1412,8 @@ document.addEventListener("DOMContentLoaded", () => {
             identificadorRequisicao += 1;
             controladorAtual = null;
             finalizarCarregamento();
+
+            fecharSugestoes();
 
             carregarPagina(
                 window.location.href,
