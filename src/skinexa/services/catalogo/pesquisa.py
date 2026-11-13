@@ -8,6 +8,7 @@ from skinexa.database.queries.itens_catalogo import (
     filtrar_itens_catalogo,
     listar_itens_catalogo,
     pesquisar_itens_catalogo_por_nome,
+    pesquisar_itens_catalogo_paginados,
 )
 
 from skinexa.dto.catalogo.autocomplete import (
@@ -231,6 +232,75 @@ def listar_itens_paginados(
         converter_item_catalogo(registro)
         for registro in registros
     ]
+
+    return PaginaItensCatalogoDTO(
+        itens=itens,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_itens=total_itens,
+        total_paginas=total_paginas,
+        tem_anterior=pagina > 1,
+        tem_proxima=pagina < total_paginas,
+    )
+
+def pesquisar_itens_paginados(
+    conexao: Connection,
+    *,
+    termo: str,
+    pagina: int = 1,
+    por_pagina: int = 20,
+    ordenacao: str = "nome_asc",
+) -> PaginaItensCatalogoDTO:
+    """
+    Pesquisa itens por nome ou identificador,
+    utilizando paginação completa.
+    """
+
+    if pagina < 1:
+        raise ValueError(
+            "A página deve ser maior que zero."
+        )
+
+    if por_pagina < 1:
+        raise ValueError(
+            "A quantidade por página deve ser maior que zero."
+        )
+
+    if por_pagina > LIMITE_MAXIMO_ITENS_POR_PAGINA:
+        raise ValueError(
+            "A quantidade por página não pode ser maior que 100."
+        )
+
+    termo_normalizado = termo.strip()
+
+    if not termo_normalizado:
+        return listar_itens_paginados(
+            conexao,
+            pagina=pagina,
+            por_pagina=por_pagina,
+            ordenacao=ordenacao,
+        )
+
+    deslocamento = (pagina - 1) * por_pagina
+
+    registros, total_itens = (
+        pesquisar_itens_catalogo_paginados(
+            conexao,
+            termo=termo_normalizado,
+            limite=por_pagina,
+            deslocamento=deslocamento,
+            ordenacao=ordenacao,
+        )
+    )
+
+    itens = [
+        converter_item_catalogo(registro)
+        for registro in registros
+    ]
+
+    total_paginas = (
+        total_itens + por_pagina - 1
+    ) // por_pagina
 
     return PaginaItensCatalogoDTO(
         itens=itens,
