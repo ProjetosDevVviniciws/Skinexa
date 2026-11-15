@@ -403,7 +403,10 @@ def buscar_sugestoes_itens_catalogo(
             nome_mercado,
             nome_exibicao,
             tipo_item,
-            url_icone
+            COALESCE(
+                NULLIF(url_icone, ''),
+                NULLIF(url_icone_grande, '')
+            ) AS url_icone
         FROM itens_catalogo
         WHERE
             nome_mercado LIKE :termo
@@ -795,6 +798,7 @@ def inserir_ou_atualizar_item_catalogo_importacao(
 
     return int(item_catalogo_id)
 
+
 def pesquisar_itens_catalogo_paginados(
     conexao: Connection,
     *,
@@ -802,16 +806,19 @@ def pesquisar_itens_catalogo_paginados(
     limite: int,
     deslocamento: int,
     ordenacao: str = "nome_asc",
+    tipo_item: str | None = None,
+    nome_arma: str | None = None,
+    nome_acabamento: str | None = None,
+    estado_exterior: str | None = None,
+    raridade: str | None = None,
+    colecao: str | None = None,
+    variante_stattrak: bool | None = None,
+    variante_souvenir: bool | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """
-    Pesquisa itens por nome ou ID exato, retornando
-    os registros da página e o total encontrado.
+    Pesquisa itens por nome ou identificador e aplica
+    filtros opcionais, com paginação e contagem total.
     """
-
-    termo_normalizado = termo.strip()
-
-    if not termo_normalizado:
-        return [], 0
 
     if limite < 1:
         raise ValueError(
@@ -827,38 +834,100 @@ def pesquisar_itens_catalogo_paginados(
         ordenacao
     )
 
-    identificador = (
-        int(termo_normalizado)
-        if termo_normalizado.isascii()
-        and termo_normalizado.isdecimal()
-        else 0
-    )
+    termo_normalizado = termo.strip()
 
-    parametros_pesquisa = {
-        "termo": f"%{termo_normalizado}%",
-        "identificador": identificador,
+    filtros_textuais = {
+        "tipo_item": tipo_item,
+        "nome_arma": nome_arma,
+        "nome_acabamento": nome_acabamento,
+        "estado_exterior": estado_exterior,
+        "raridade": raridade,
+        "colecao": colecao,
     }
 
-    condicao_pesquisa = """
-        (
-            nome_mercado LIKE :termo
-            OR nome_exibicao LIKE :termo
-            OR id = :identificador
+    condicoes: list[str] = []
+    parametros: dict[str, Any] = {}
+
+    # Pesquisa por nome ou identificador interno.
+    if termo_normalizado:
+        identificador = (
+            int(termo_normalizado)
+            if termo_normalizado.isascii()
+            and termo_normalizado.isdecimal()
+            else 0
         )
-    """
+
+        condicoes.append(
+            """
+            (
+                nome_mercado LIKE :termo
+                OR nome_exibicao LIKE :termo
+                OR id = :identificador
+            )
+            """
+        )
+
+        parametros["termo"] = f"%{termo_normalizado}%"
+        parametros["identificador"] = identificador
+
+    # Filtros textuais opcionais.
+    for campo, valor in filtros_textuais.items():
+        if valor is None:
+            continue
+
+        valor_normalizado = valor.strip()
+
+        if not valor_normalizado:
+            continue
+
+        # Os nomes das colunas são fixos e definidos
+        # internamente, nunca recebidos da requisição.
+        condicoes.append(
+            f"{campo} = :{campo}"
+        )
+
+        parametros[campo] = valor_normalizado
+
+    # Filtros booleanos opcionais.
+    if variante_stattrak is not None:
+        condicoes.append(
+            "variante_stattrak = :variante_stattrak"
+        )
+
+        parametros["variante_stattrak"] = (
+            variante_stattrak
+        )
+
+    if variante_souvenir is not None:
+        condicoes.append(
+            "variante_souvenir = :variante_souvenir"
+        )
+
+        parametros["variante_souvenir"] = (
+            variante_souvenir
+        )
+
+    # Preserva o comportamento anterior para
+    # chamadas sem termo e sem filtros.
+    if not condicoes:
+        return [], 0
+
+    clausula_where = (
+        "WHERE " + " AND ".join(condicoes)
+    )
 
     consulta_total = text(
         f"""
         SELECT COUNT(*)
         FROM itens_catalogo
-        WHERE {condicao_pesquisa}
+        {clausula_where}
         """
     )
 
     total_itens = int(
         conexao.execute(
             consulta_total,
-            parametros_pesquisa,
+            parametros,
         ).scalar_one()
     )
 
@@ -893,7 +962,7 @@ def pesquisar_itens_catalogo_paginados(
             criado_em,
             atualizado_em
         FROM itens_catalogo
-        WHERE {condicao_pesquisa}
+        {clausula_where}
         ORDER BY {clausula_ordenacao}
         LIMIT :limite
         OFFSET :deslocamento
@@ -903,7 +972,7 @@ def pesquisar_itens_catalogo_paginados(
     registros = conexao.execute(
         consulta_itens,
         {
-            **parametros_pesquisa,
+            **parametros,
             "limite": limite,
             "deslocamento": deslocamento,
         },
