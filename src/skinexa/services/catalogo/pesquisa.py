@@ -250,10 +250,18 @@ def pesquisar_itens_paginados(
     pagina: int = 1,
     por_pagina: int = 20,
     ordenacao: str = "nome_asc",
+    tipo_item: str | None = None,
+    nome_arma: str | None = None,
+    nome_acabamento: str | None = None,
+    estado_exterior: str | None = None,
+    raridade: str | None = None,
+    colecao: str | None = None,
+    variante_stattrak: bool | None = None,
+    variante_souvenir: bool | None = None,
 ) -> PaginaItensCatalogoDTO:
     """
-    Pesquisa itens por nome ou identificador,
-    utilizando paginação completa.
+    Pesquisa e filtra itens do catálogo, retornando
+    os resultados com paginação completa.
     """
 
     if pagina < 1:
@@ -273,7 +281,29 @@ def pesquisar_itens_paginados(
 
     termo_normalizado = termo.strip()
 
-    if not termo_normalizado:
+    filtros = {
+        "tipo_item": tipo_item,
+        "nome_arma": nome_arma,
+        "nome_acabamento": nome_acabamento,
+        "estado_exterior": estado_exterior,
+        "raridade": raridade,
+        "colecao": colecao,
+        "variante_stattrak": variante_stattrak,
+        "variante_souvenir": variante_souvenir,
+    }
+
+    possui_filtros = any(
+        valor is not None
+        and (
+            not isinstance(valor, str)
+            or bool(valor.strip())
+        )
+        for valor in filtros.values()
+    )
+
+    # Mantém a listagem tradicional quando nenhuma
+    # pesquisa ou filtro estiver ativo.
+    if not termo_normalizado and not possui_filtros:
         return listar_itens_paginados(
             conexao,
             pagina=pagina,
@@ -290,6 +320,7 @@ def pesquisar_itens_paginados(
             limite=por_pagina,
             deslocamento=deslocamento,
             ordenacao=ordenacao,
+            **filtros,
         )
     )
 
