@@ -37,6 +37,69 @@ mercado_bp = Blueprint(
     url_prefix="/mercado",
 )
 
+FILTROS_TEXTUAIS_MERCADO = (
+    "tipo_item",
+    "nome_arma",
+    "nome_acabamento",
+    "estado_exterior",
+    "raridade",
+    "colecao",
+)
+
+FILTROS_BOOLEANOS_MERCADO = (
+    "variante_stattrak",
+    "variante_souvenir",
+)
+
+def obter_filtros_mercado() -> dict[str, str | bool | None]:
+    """
+    Obtém e valida os filtros enviados na URL do Mercado.
+
+    Textuais:
+        None: filtro não aplicado.
+
+    Booleanos:
+        None: todos.
+        True: somente com a variante.
+        False: somente sem a variante.
+    """
+
+    filtros: dict[str, str | bool | None] = {}
+
+    for campo in FILTROS_TEXTUAIS_MERCADO:
+        valor = request.args.get(
+            campo,
+            default="",
+            type=str,
+        ).strip()
+
+        if len(valor) > 150:
+            raise ValueError(
+                f"Valor muito longo para o filtro: {campo}."
+            )
+
+        filtros[campo] = valor or None
+
+    for campo in FILTROS_BOOLEANOS_MERCADO:
+        valor = request.args.get(
+            campo,
+            default="",
+            type=str,
+        ).strip().lower()
+
+        if valor == "":
+            filtros[campo] = None
+        elif valor in ("1", "true"):
+            filtros[campo] = True
+        elif valor in ("0", "false"):
+            filtros[campo] = False
+        else:
+            raise ValueError(
+                f"Valor inválido para o filtro: {campo}."
+            )
+
+    return filtros
+
 @mercado_bp.get("/")
 def index():
     """Renderiza a página principal do mercado."""
@@ -65,6 +128,11 @@ def index():
         type=str,
     ).strip()
     
+    try:
+        filtros = obter_filtros_mercado()
+    except ValueError:
+        abort(400)
+    
     if (
             pagina < 1
             or por_pagina < 1
@@ -75,13 +143,19 @@ def index():
             abort(400) 
     
     with engine.connect() as conexao:
-        if termo:
+        possui_filtros = any(
+            valor is not None
+            for valor in filtros.values()
+        )
+
+        if termo or possui_filtros:
             resultado = pesquisar_itens_paginados(
                 conexao,
                 termo=termo,
                 pagina=pagina,
                 por_pagina=por_pagina,
                 ordenacao=ordenacao,
+                **filtros,
             )
         else:
             resultado = listar_itens_paginados(
@@ -96,6 +170,7 @@ def index():
         resultado=resultado,
         ordenacao=ordenacao,
         termo=termo,
+        filtros=filtros,
     )
 
 @mercado_bp.get("/itens")
@@ -126,6 +201,16 @@ def listar_itens_json():
         type=str,
     ).strip()    
     
+    try:
+        filtros = obter_filtros_mercado()
+    except ValueError as erro:
+        return jsonify(
+            {
+                "sucesso": False,
+                "mensagem": str(erro),
+            }
+        ), 400
+    
     if (
         pagina < 1
         or por_pagina < 1
@@ -144,13 +229,19 @@ def listar_itens_json():
         ), 400
     
     with engine.connect() as conexao:
-        if termo:
+        possui_filtros = any(
+            valor is not None
+            for valor in filtros.values()
+        )
+
+        if termo or possui_filtros:
             resultado = pesquisar_itens_paginados(
                 conexao,
                 termo=termo,
                 pagina=pagina,
                 por_pagina=por_pagina,
                 ordenacao=ordenacao,
+                **filtros,
             )
         else:
             resultado = listar_itens_paginados(
