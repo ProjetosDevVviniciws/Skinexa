@@ -11,6 +11,7 @@ URL_BASE_CSGO_API = (
 
 ARQUIVOS_CATALOGO = {
     "skins": "skins_not_grouped.json",
+    "collections": "collections.json",
     "adesivos": "stickers.json",
     "caixas": "crates.json",
     "agentes": "agents.json",
