@@ -2,10 +2,6 @@ import pytest
 
 from unittest.mock import Mock
 
-from skinexa.database.queries.itens_catalogo import (
-    inserir_ou_atualizar_item_catalogo_importacao,
-)
-
 from skinexa.dto.catalogo.importacao import (
     ItemImportacaoCatalogoDTO,
 )
@@ -18,6 +14,7 @@ from skinexa.database.queries.itens_catalogo import (
     obter_item_catalogo_por_nome_mercado,
     obter_itens_catalogo_ids_por_nomes_mercado,
     _obter_ordenacao_catalogo,
+    inserir_ou_atualizar_item_catalogo_importacao,
     pesquisar_itens_catalogo_por_nome,
     filtrar_itens_catalogo,
 )
