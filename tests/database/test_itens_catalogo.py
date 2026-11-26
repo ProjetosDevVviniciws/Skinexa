@@ -13,6 +13,7 @@ from skinexa.database.queries.itens_catalogo import (
     obter_item_catalogo_por_id,
     obter_item_catalogo_por_nome_mercado,
     obter_itens_catalogo_ids_por_nomes_mercado,
+    obter_itens_catalogo_ids_por_skin_ids,
     _obter_ordenacao_catalogo,
     inserir_ou_atualizar_item_catalogo_importacao,
     pesquisar_itens_catalogo_por_nome,
@@ -1237,3 +1238,193 @@ def test_importacao_utiliza_upsert_mysql():
     assert "LAST_INSERT_ID(id)" in consulta
 
     conexao.execute.assert_called_once()
+    
+def test_obter_itens_catalogo_ids_por_skin_ids():
+    """Resolve múltiplos itens comerciais por skin_id."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value.mappings.return_value = [
+        {"id": 100, "skin_id": "skin-ak47"},
+        {"id": 101, "skin_id": "skin-ak47"},
+        {"id": 200, "skin_id": "skin-awp"},
+    ]
+
+    resultado = obter_itens_catalogo_ids_por_skin_ids(
+        conexao,
+        {"skin-ak47", "skin-awp"},
+    )
+
+    assert resultado == {
+        "skin-ak47": [100, 101],
+        "skin-awp": [200],
+    }
+
+    parametros = conexao.execute.call_args.args[1]
+
+    assert parametros["app_id"] == 730
+    assert parametros["fonte"] == "csgo_api"
+    assert set(parametros["skin_ids"]) == {
+        "skin-ak47",
+        "skin-awp",
+    }
+
+def test_obter_itens_por_skin_ids_sem_correspondencia():
+    """Retorna dicionário vazio quando não encontra itens."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value.mappings.return_value = []
+
+    resultado = obter_itens_catalogo_ids_por_skin_ids(
+        conexao,
+        {"skin-inexistente"},
+    )
+
+    assert resultado == {}
+
+def test_obter_itens_por_skin_ids_lista_vazia():
+    """Não consulta o banco quando não há identificadores."""
+
+    conexao = Mock()
+
+    resultado = obter_itens_catalogo_ids_por_skin_ids(
+        conexao,
+        set(),
+    )
+
+    assert resultado == {}
+
+    conexao.execute.assert_not_called()
+
+def test_obter_itens_por_skin_ids_normaliza_identificadores():
+    """Remove espaços e ignora identificadores vazios."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value.mappings.return_value = [
+        {"id": 100, "skin_id": "skin-ak47"},
+    ]
+
+    resultado = obter_itens_catalogo_ids_por_skin_ids(
+        conexao,
+        {"  skin-ak47  ", "skin-ak47", "   "},
+    )
+
+    assert resultado == {
+        "skin-ak47": [100],
+    }
+
+    parametros = conexao.execute.call_args.args[1]
+
+    assert parametros["skin_ids"] == ("skin-ak47",)
+
+def test_obter_itens_por_skin_ids_remove_duplicacoes():
+    """Remove IDs repetidos e ordena os resultados."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value.mappings.return_value = [
+        {"id": 103, "skin_id": "skin-ak47"},
+        {"id": 100, "skin_id": "skin-ak47"},
+        {"id": 103, "skin_id": "skin-ak47"},
+        {"id": 101, "skin_id": "skin-ak47"},
+    ]
+
+    resultado = obter_itens_catalogo_ids_por_skin_ids(
+        conexao,
+        {"skin-ak47"},
+    )
+
+    assert resultado == {
+        "skin-ak47": [100, 101, 103],
+    }
+
+@pytest.mark.parametrize(
+    "app_id",
+    [0, -1],
+)
+
+def test_obter_itens_por_skin_ids_rejeita_app_id_invalido(
+    app_id,
+):
+    """Rejeita identificadores inválidos de aplicativo."""
+
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="O app_id deve ser maior que zero",
+    ):
+        obter_itens_catalogo_ids_por_skin_ids(
+            conexao,
+            {"skin-ak47"},
+            app_id=app_id,
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_obter_itens_por_skin_ids_rejeita_tipo_invalido():
+    """Rejeita identificadores externos não textuais."""
+    
+    conexao = Mock()
+
+    with pytest.raises(
+        ValueError,
+        match="Todos os skin_ids devem ser strings",
+    ):
+        obter_itens_catalogo_ids_por_skin_ids(
+            conexao,
+            {"skin-ak47", 123},
+        )
+
+    conexao.execute.assert_not_called()
+
+def test_obter_itens_por_skin_ids_rejeita_id_comercial_invalido():
+    """Rejeita IDs comerciais inválidos retornados pela consulta."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value.mappings.return_value = [
+        {"id": 0, "skin_id": "skin-ak47"},
+    ]
+
+    with pytest.raises(
+        RuntimeError,
+        match="ID comercial inválido",
+    ):
+        obter_itens_catalogo_ids_por_skin_ids(
+            conexao,
+            {"skin-ak47"},
+        )
+
+def test_obter_itens_por_skin_ids_utiliza_json_e_parametros():
+    """Verifica os filtros de origem e o uso de parâmetros."""
+
+    conexao = Mock()
+
+    conexao.execute.return_value.mappings.return_value = []
+
+    obter_itens_catalogo_ids_por_skin_ids(
+        conexao,
+        {"skin-ak47"},
+    )
+
+    consulta = conexao.execute.call_args.args[0]
+    parametros = conexao.execute.call_args.args[1]
+
+    sql = str(consulta)
+
+    assert "JSON_VALID(metadados_origem)" in sql
+    assert "$.skin_id" in sql
+    assert "$.fonte" in sql
+    assert "app_id = :app_id" in sql
+
+    assert "IN (__[POSTCOMPILE_skin_ids])" in sql
+
+    assert "skin_ids" in consulta._bindparams
+    assert consulta._bindparams["skin_ids"].expanding is True
+
+    assert parametros["app_id"] == 730
+    assert parametros["fonte"] == "csgo_api"
+    assert parametros["skin_ids"] == ("skin-ak47",)
