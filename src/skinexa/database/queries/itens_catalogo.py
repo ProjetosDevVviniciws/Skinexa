@@ -985,3 +985,120 @@ def pesquisar_itens_catalogo_paginados(
         ],
         total_itens,
     )
+    
+def obter_itens_catalogo_ids_por_skin_ids(
+    conexao: Connection,
+    skin_ids: set[str],
+    *,
+    app_id: int = 730,
+) -> dict[str, list[int]]:
+    """
+    Resolve IDs comerciais a partir dos skin_ids da CSGO-API.
+
+    Um skin_id pode corresponder a vários itens comerciais.
+
+    Retorna um dicionário contendo somente os skin_ids
+    encontrados e seus respectivos IDs internos, sem
+    duplicações e em ordem crescente.
+
+    Não modifica os registros existentes.
+    """
+
+    if app_id <= 0:
+        raise ValueError(
+            "O app_id deve ser maior que zero."
+        )
+
+    ids_normalizados: set[str] = set()
+
+    for skin_id in skin_ids:
+        if not isinstance(skin_id, str):
+            raise ValueError(
+                "Todos os skin_ids devem ser strings."
+            )
+
+        identificador = skin_id.strip()
+
+        if identificador:
+            ids_normalizados.add(identificador)
+
+    if not ids_normalizados:
+        return {}
+
+    consulta = text(
+        """
+        SELECT
+            id,
+            CASE
+                WHEN JSON_VALID(metadados_origem)
+                THEN JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                        metadados_origem,
+                        '$.skin_id'
+                    )
+                )
+                ELSE NULL
+            END AS skin_id
+        FROM itens_catalogo
+        WHERE app_id = :app_id
+          AND CASE
+                WHEN JSON_VALID(metadados_origem)
+                THEN JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                        metadados_origem,
+                        '$.fonte'
+                    )
+                )
+                ELSE NULL
+              END = :fonte
+          AND CASE
+                WHEN JSON_VALID(metadados_origem)
+                THEN JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                        metadados_origem,
+                        '$.skin_id'
+                    )
+                )
+                ELSE NULL
+              END IN :skin_ids
+        """
+    ).bindparams(
+        bindparam(
+            "skin_ids",
+            expanding=True,
+        )
+    )
+
+    resultado = conexao.execute(
+        consulta,
+        {
+            "app_id": app_id,
+            "fonte": "csgo_api",
+            "skin_ids": tuple(sorted(ids_normalizados)),
+        },
+    )
+
+    mapa: dict[str, set[int]] = {}
+
+    for registro in resultado.mappings():
+        skin_id = registro["skin_id"]
+        item_id = int(registro["id"])
+
+        if skin_id not in ids_normalizados:
+            continue
+
+        if item_id <= 0:
+            raise RuntimeError(
+                "ID comercial inválido encontrado "
+                f"para a skin {skin_id}."
+            )
+
+        mapa.setdefault(
+            skin_id,
+            set(),
+        ).add(item_id)
+
+    return {
+        skin_id: sorted(ids)
+        for skin_id, ids in sorted(mapa.items())
+    }
