@@ -6,6 +6,7 @@ from skinexa.dto.catalogo.colecoes import (
 
 from skinexa.integrations.catalogo.normalizador_colecoes_csgo_api import (
     ErroNormalizacaoColecaoCSGOAPI,
+    extrair_skin_ids_colecao_csgo_api,
     normalizar_colecao_csgo_api,
 )
 
@@ -271,3 +272,309 @@ def test_normalizar_colecao_nao_modifica_registro():
     )
 
     assert registro == original
+    
+def criar_registro_colecao_com_skins(
+    *,
+    conteudos: list | None = None,
+) -> dict:
+    """Cria uma coleção simulada com relacionamentos."""
+
+    if conteudos is None:
+        conteudos = [
+            {"id": "skin-ak47"},
+            {"id": "skin-awp"},
+        ]
+
+    return {
+        "id": "collection-test",
+        "name": "Test Collection",
+        "contains": conteudos,
+    }
+
+def test_extrair_skin_ids_colecao_csgo_api():
+    """Extrai todos os identificadores das skins."""
+
+    registro = criar_registro_colecao_com_skins()
+
+    resultado = extrair_skin_ids_colecao_csgo_api(
+        registro
+    )
+
+    assert resultado == {
+        "skin-ak47",
+        "skin-awp",
+    }
+
+def test_extrair_skin_ids_remove_duplicacoes():
+    """Remove identificadores repetidos na coleção."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[
+            {"id": "skin-ak47"},
+            {"id": "skin-awp"},
+            {"id": "skin-ak47"},
+        ],
+    )
+
+    resultado = extrair_skin_ids_colecao_csgo_api(
+        registro
+    )
+
+    assert resultado == {
+        "skin-ak47",
+        "skin-awp",
+    }
+
+def test_extrair_skin_ids_normaliza_espacos():
+    """Remove espaços antes de registrar os identificadores."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[
+            {"id": "  skin-ak47  "},
+            {"id": " skin-awp "},
+        ],
+    )
+
+    resultado = extrair_skin_ids_colecao_csgo_api(
+        registro
+    )
+
+    assert resultado == {
+        "skin-ak47",
+        "skin-awp",
+    }
+
+def test_extrair_skin_ids_colecao_vazia():
+    """Aceita uma lista de conteúdos vazia."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[],
+    )
+
+    resultado = extrair_skin_ids_colecao_csgo_api(
+        registro
+    )
+
+    assert resultado == set()
+
+@pytest.mark.parametrize(
+    "conteudos",
+    [
+        None,
+        {},
+        "",
+        "skin-ak47",
+        123,
+    ],
+)
+
+def test_extrair_skin_ids_rejeita_contains_invalido(
+    conteudos,
+):
+    """Rejeita relacionamentos que não são listas."""
+
+    registro = criar_registro_colecao_com_skins()
+    registro["contains"] = conteudos
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Relacionamentos da coleção inválidos",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+def test_extrair_skin_ids_rejeita_contains_ausente():
+    """Rejeita coleções sem o campo contains."""
+
+    registro = criar_registro_colecao_com_skins()
+    del registro["contains"]
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Relacionamentos da coleção inválidos",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+@pytest.mark.parametrize(
+    "conteudo",
+    [
+        None,
+        [],
+        "skin-ak47",
+        123,
+    ],
+)
+
+def test_extrair_skin_ids_rejeita_conteudo_invalido(
+    conteudo,
+):
+    """Rejeita elementos de contains que não são objetos."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[conteudo],
+    )
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Conteúdo inválido na coleção",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+@pytest.mark.parametrize(
+    "skin_id",
+    [
+        None,
+        "",
+        "   ",
+        123,
+        [],
+    ],
+)
+
+def test_extrair_skin_ids_rejeita_id_invalido(
+    skin_id,
+):
+    """Rejeita skins sem identificador textual válido."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[
+            {"id": skin_id},
+        ],
+    )
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Skin sem identificador válido",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+def test_extrair_skin_ids_rejeita_id_muito_longo():
+    """Rejeita skin_ids acima de 150 caracteres."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[
+            {"id": "x" * 151},
+        ],
+    )
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Identificador da skin excede 150 caracteres",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+def test_extrair_skin_ids_aceita_id_limite():
+    """Aceita skin_ids com exatamente 150 caracteres."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[
+            {"id": "x" * 150},
+        ],
+    )
+
+    resultado = extrair_skin_ids_colecao_csgo_api(
+        registro
+    )
+
+    assert resultado == {"x" * 150}
+
+@pytest.mark.parametrize(
+    "registro",
+    [
+        None,
+        [],
+        "colecao-invalida",
+        123,
+    ],
+)
+
+def test_extrair_skin_ids_rejeita_registro_invalido(
+    registro,
+):
+    """Rejeita registros que não são dicionários."""
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Registro de coleção inválido",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+def test_extrair_skin_ids_rejeita_colecao_invalida():
+    """Valida a coleção antes de extrair relacionamentos."""
+
+    registro = {
+        "id": "",
+        "name": "Test Collection",
+        "contains": [
+            {"id": "skin-ak47"},
+        ],
+    }
+
+    with pytest.raises(
+        ErroNormalizacaoColecaoCSGOAPI,
+        match="Coleção sem ID externo válido",
+    ):
+        extrair_skin_ids_colecao_csgo_api(
+            registro
+        )
+
+def test_extrair_skin_ids_preserva_registro_original():
+    """Não modifica o registro recebido da API."""
+
+    registro = criar_registro_colecao_com_skins(
+        conteudos=[
+            {"id": "  skin-ak47  "},
+            {"id": "skin-awp"},
+        ],
+    )
+
+    import copy
+
+    original = copy.deepcopy(registro)
+
+    extrair_skin_ids_colecao_csgo_api(
+        registro
+    )
+
+    assert registro == original
+
+def test_extrair_skin_ids_permite_multiplas_colecoes():
+    """Permite que uma skin apareça em coleções diferentes."""
+
+    primeira_colecao = {
+        "id": "collection-a",
+        "name": "Collection A",
+        "contains": [
+            {"id": "skin-ak47"},
+        ],
+    }
+
+    segunda_colecao = {
+        "id": "collection-b",
+        "name": "Collection B",
+        "contains": [
+            {"id": "skin-ak47"},
+        ],
+    }
+
+    resultado_primeira = extrair_skin_ids_colecao_csgo_api(
+        primeira_colecao
+    )
+
+    resultado_segunda = extrair_skin_ids_colecao_csgo_api(
+        segunda_colecao
+    )
+
+    assert resultado_primeira == {"skin-ak47"}
+    assert resultado_segunda == {"skin-ak47"}
