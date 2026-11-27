@@ -72,3 +72,59 @@ def normalizar_colecao_csgo_api(
         tipo_colecao=None,
         url_imagem=url_imagem,
     )
+    
+def extrair_skin_ids_colecao_csgo_api(
+    registro: dict[str, Any],
+) -> set[str]:
+    """
+    Extrai os identificadores das skins de uma coleção.
+
+    Lê o campo contains fornecido pela CSGO-API e
+    retorna os skin_ids como um conjunto sem duplicações.
+
+    Não consulta o banco de dados e não modifica
+    o registro original.
+    """
+
+    if not isinstance(registro, dict):
+        raise ErroNormalizacaoColecaoCSGOAPI(
+            "Registro de coleção inválido."
+        )
+
+    normalizar_colecao_csgo_api(registro)
+
+    conteudos = registro.get("contains")
+
+    if not isinstance(conteudos, list):
+        raise ErroNormalizacaoColecaoCSGOAPI(
+            "Relacionamentos da coleção inválidos."
+        )
+
+    skin_ids: set[str] = set()
+
+    for indice, conteudo in enumerate(conteudos):
+        if not isinstance(conteudo, dict):
+            raise ErroNormalizacaoColecaoCSGOAPI(
+                "Conteúdo inválido na coleção "
+                f"na posição {indice}."
+            )
+
+        skin_id = _obter_texto(
+            conteudo.get("id")
+        )
+
+        if skin_id is None:
+            raise ErroNormalizacaoColecaoCSGOAPI(
+                "Skin sem identificador válido "
+                f"na posição {indice}."
+            )
+
+        if len(skin_id) > 150:
+            raise ErroNormalizacaoColecaoCSGOAPI(
+                "Identificador da skin excede "
+                "150 caracteres."
+            )
+
+        skin_ids.add(skin_id)
+
+    return skin_ids
