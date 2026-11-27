@@ -848,7 +848,6 @@ def pesquisar_itens_catalogo_paginados(
     condicoes: list[str] = []
     parametros: dict[str, Any] = {}
 
-    # Pesquisa por nome ou identificador interno.
     if termo_normalizado:
         identificador = (
             int(termo_normalizado)
@@ -870,7 +869,6 @@ def pesquisar_itens_catalogo_paginados(
         parametros["termo"] = f"%{termo_normalizado}%"
         parametros["identificador"] = identificador
 
-    # Filtros textuais opcionais.
     for campo, valor in filtros_textuais.items():
         if valor is None:
             continue
@@ -880,15 +878,12 @@ def pesquisar_itens_catalogo_paginados(
         if not valor_normalizado:
             continue
 
-        # Os nomes das colunas são fixos e definidos
-        # internamente, nunca recebidos da requisição.
         condicoes.append(
             f"{campo} = :{campo}"
         )
 
         parametros[campo] = valor_normalizado
 
-    # Filtros booleanos opcionais.
     if variante_stattrak is not None:
         condicoes.append(
             "variante_stattrak = :variante_stattrak"
@@ -906,9 +901,7 @@ def pesquisar_itens_catalogo_paginados(
         parametros["variante_souvenir"] = (
             variante_souvenir
         )
-
-    # Preserva o comportamento anterior para
-    # chamadas sem termo e sem filtros.
+        
     if not condicoes:
         return [], 0
 
